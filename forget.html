@@ -3,52 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Connect - Forgotten Password </title>
+    <title>Student Connect - Forgotten Password</title>
     <link rel="stylesheet" href="css/sign.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
         <div class="login-section">
             <div class="form-wrapper">
                 <h1>Forgotten Password</h1>
-                <p class="subtitle">Enter your account details</p>
+                <p class="subtitle">Enter your account details to receive a reset link</p>
 
-                <form>
+                <form id="resetForm">
                     <div class="input-group">
                         <input type="email" id="email" placeholder="Email Address" required>
                     </div>
 
                     <div class="input-group">
                         <div class="matric">
-                            <input type="number" id="password" placeholder="Matric No" required>
+                            <input type="text" id="matricNo" placeholder="Matric No" required>
                         </div>
                     </div>
 
-                    <a href="sign.html" class="forgot-link">Remembered Password?</a>
+                    <a href="login.html" class="forgot-link">Remembered Password?</a>
 
-                    <button type="submit" class="login-btn">Request Code</button>
+                    <button type="submit" class="login-btn" id="resetBtn">Request Link</button>
                 </form>
 
                 <div class="footer-links">
-    <span>Don't have an account?</span>
-    <a href="create.html">
-        <button type="button" class="signup-btn">Sign up</button>
-    </a>
-</div>
-
+                    <span>Don't have an account?</span>
+                    <a href="create.html">
+                        <button type="button" class="signup-btn">Sign up</button>
+                    </a>
+                </div>
             </div>
         </div>
 
         <div class="welcome-section">
             <div class="content">
-                <h2>Forgotten your password </h2>
-                <p>Request for code to gain access again</p>
+                <h2>Forgotten your password</h2>
+                <p>Request for a reset link to gain access again</p>
                 <div class="illustration">
                     <img src="img/img1.png" alt="Illustration">
                 </div>
             </div>
         </div>
     </div>
+
+    <script>
+        // 1. INITIALIZE SUPABASE
+        const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const resetForm = document.getElementById('resetForm');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // 2. HANDLE RESET REQUEST
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+
+            // Loading state
+            resetBtn.innerText = "Sending...";
+            resetBtn.disabled = true;
+
+            const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                // IMPORTANT: Change this to your actual hosted URL or local dev URL
+                // This is where the user lands after clicking the email link
+                redirectTo: window.location.origin + '/update-password.html',
+            });
+
+            if (error) {
+                alert("Error: " + error.message);
+                resetBtn.innerText = "Request Link";
+                resetBtn.disabled = false;
+            } else {
+                alert("Check your email! A password reset link has been sent.");
+                resetBtn.innerText = "Link Sent ✅";
+            }
+        });
+    </script>
 </body>
 </html>
