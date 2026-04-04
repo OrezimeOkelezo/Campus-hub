@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Connect - Create Account</title>
+    <link rel="stylesheet" href="css/create.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="login-section">
+            <div class="form-wrapper">
+                <h1>Create Account</h1>
+                <p class="subtitle">Join the student portal today</p>
+
+                <form id="registerForm">
+                    <div class="input-group">
+                        <input type="text" id="name" placeholder="Full Name" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="email" id="email" placeholder="Email Address" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="matricNo" placeholder="Matric No" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="year" placeholder="Year of Admission" min="2000" max="2026" required>
+                    </div>
+                    <div class="input-group">
+                        <div class="password-wrapper">
+                            <input type="password" id="password" placeholder="Password" required minlength="6">
+                            <span class="toggle-password" onclick="toggleVisibility('password', this)">👁️</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="password-wrapper">
+                            <input type="password" id="confirmPassword" placeholder="Confirm Password" required minlength="6">
+                            <span class="toggle-password" onclick="toggleVisibility('confirmPassword', this)">👁️</span>
+                        </div>
+                    </div>
+                    <button type="submit" id="submitBtn" class="login-btn">Sign Up</button>
+                </form>
+
+                <div class="footer-links">
+                    <span>Already have an account?</span>
+                    <a href="sign.html" style="text-decoration: none;"><button class="signup-btn">Login</button></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="welcome-section">
+            <div class="content">
+                <h2>Join the community</h2>
+                <p>Register to manage your academic journey with ease.</p>
+                <div class="illustration">
+                    <img src="img/img.png" alt="Illustration">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const _supabase = supabase.createClient(
+            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
+            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
+        );
+
+        function toggleVisibility(inputId, element) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === "password" ? "text" : "password";
+            element.textContent = input.type === "password" ? "👁️" : "🙈";
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const password = document.getElementById('password').value;
+            const confirmPass = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPass) {
+                alert("Passwords do not match!");
+                return;
+            }
+
+            submitBtn.innerText = "Creating Account...";
+            submitBtn.disabled = true;
+
+            const { data, error } = await _supabase.auth.signUp({
+                email: document.getElementById('email').value,
+                password: password,
+                options: {
+                    // Update this URL to where you want them to go after clicking the email link
+                    emailRedirectTo: window.location.origin + '/sign.html',
+                    data: {
+                        full_name: document.getElementById('name').value,
+                        matric_no: document.getElementById('matricNo').value,
+                        admission_year: document.getElementById('year').value,
+                        points: 0,
+                        block: false,
+                        avatar: null,
+                        bio: null,
+                        verified: false,
+                        status: null
+                    }
+                }
+            });
+
+            if (error) {
+                alert("Error: " + error.message);
+                submitBtn.innerText = "Sign Up";
+                submitBtn.disabled = false;
+            } else {
+                alert("Account created! Please check your email to verify your account.");
+                window.location.href = "sign.html";
+            }
+        });
+    </script>
+</body>
+</html>
