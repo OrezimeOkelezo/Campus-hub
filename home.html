@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Student Connect</title>
+    <link rel="stylesheet" href="css/home.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <header class="top-nav">
+        <div class="header-inner">
+            <div class="nav-left">
+                <h2 id="userGreeting">Hi, Loading...</h2>
+            </div>
+            <div class="nav-right">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <i class="fa-solid fa-bars" id="menuToggle"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <main class="feed-container" id="postsFeed">
+            <div class="loading-spinner" style="text-align: center; padding: 20px;">
+                <p>Loading Feed...</p>
+            </div>
+        </main>
+
+        <aside class="side-panel" id="sidePanel">
+            <div class="cover-photo"></div>
+            <div class="profile-card">
+                <img src="" alt="Me" class="profile-img" id="drawerAvatar">
+                <h3 id="drawerName">Student Name</h3>
+                <p class="email" id="drawerEmail">email@student.com</p>
+            </div>
+            <nav class="menu">
+                <a href="home.html" class="active-link"><i class="fa-solid fa-house"></i> Home</a>
+                <a href="profile.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>
+                <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>
+                <a href="#"><i class="fa-solid fa-message"></i> Messages</a>
+                <a href="#" id="logoutBtn" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </nav>
+        </aside>
+    </div>
+
+    <a href="cpost.html" class="fab-main">
+        <i class="fa-solid fa-plus"></i>
+    </a>
+
+    <script>
+        // 1. INITIALIZE SUPABASE
+        const _supabase = supabase.createClient(
+            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
+            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
+        );
+
+        const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+        // 2. FETCH USER DATA & UPDATE UI
+        async function loadUserData() {
+            const { data: { user }, error } = await _supabase.auth.getUser();
+
+            if (error || !user) {
+                window.location.href = "sign.html"; // Not logged in? Send to login
+                return;
+            }
+
+            const metadata = user.user_metadata;
+            const firstName = metadata.full_name.split(' ')[0]; // Gets just the first name
+
+            // Update Top Nav
+            document.getElementById('userGreeting').innerText = `Hi, ${firstName}`;
+
+            // Update Drawer (Side Panel)
+            document.getElementById('drawerName').innerText = metadata.full_name;
+            document.getElementById('drawerEmail').innerText = user.email;
+            
+            const avatarImg = document.getElementById('drawerAvatar');
+            avatarImg.src = metadata.avatar ? metadata.avatar : DEFAULT_AVATAR;
+        }
+
+        // 3. FETCH POSTS FROM DATABASE
+        async function loadPosts() {
+            const feed = document.getElementById('postsFeed');
+            
+            const { data: posts, error } = await _supabase
+                .from('posts') // Ensure your table is named 'posts'
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Error loading posts:", error);
+                return;
+            }
+
+            feed.innerHTML = ''; // Clear loading spinner
+
+            posts.forEach(post => {
+                const postHTML = `
+                    <div class="post">
+                        <div class="post-sidebar">
+                            <img src="${post.author_avatar || DEFAULT_AVATAR}" alt="User" class="avatar">
+                        </div>
+                        <div class="post-main">
+                            <a href="post.html?id=${post.id}" class="post-link">
+                                <div class="post-info">
+                                    <span class="user-name">${post.author_name}</span>
+                                    <span class="user-handle">@${post.author_handle || 'student'} • ${new Date(post.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <div class="view-stats">
+                                    <i class="fa-regular fa-eye"></i> ${post.views || 0} views
+                                </div>
+                                <p class="post-text">${post.content}</p>
+                                ${post.image_url ? `<img src="${post.image_url}" class="content-img">` : ''}
+                            </a>
+                            <div class="post-actions-static">
+                                <span class="stat-item"><i class="fa-regular fa-thumbs-up"></i> ${post.likes || 0}</span>
+                                <span class="stat-item"><i class="fa-regular fa-thumbs-down"></i> ${post.dislikes || 0}</span>
+                                <span class="stat-item"><i class="fa-regular fa-comment"></i> ${post.comments_count || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feed.innerHTML += postHTML;
+            });
+        }
+
+        // 4. LOGOUT LOGIC
+        document.getElementById('logoutBtn').onclick = async (e) => {
+            e.preventDefault();
+            const { error } = await _supabase.auth.signOut();
+            window.location.href = "sign.html";
+        };
+
+        // 5. DRAWER TOGGLE LOGIC
+        const menuToggle = document.getElementById('menuToggle');
+        const sidePanel = document.getElementById('sidePanel');
+
+        menuToggle.onclick = (e) => {
+            e.stopPropagation();
+            sidePanel.classList.toggle('active');
+        };
+
+        document.onclick = (e) => {
+            if (!sidePanel.contains(e.target) && !menuToggle.contains(e.target)) {
+                sidePanel.classList.remove('active');
+            }
+        };
+
+        // Initialize Page
+        window.onload = () => {
+            loadUserData();
+            loadPosts();
+        };
+    </script>
+</body>
+</html>
