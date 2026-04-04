@@ -1,0 +1,182 @@
+:root {
+    --bg-dark: #1a1a1a;
+    --accent-purple: #a881ff;
+    --text-gray: #888;
+    --white: #ffffff;
+    --input-border: #333;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: #121212;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    display: flex;
+    width: 1000px; /* Slightly wider to accommodate more fields */
+    min-height: 750px;
+    background-color: var(--bg-dark);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+
+/* Form Section */
+.login-section {
+    flex: 1;
+    padding: 40px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+h1 {
+    color: var(--white);
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: var(--text-gray);
+    font-size: 0.85rem;
+    margin-bottom: 30px;
+}
+
+.input-group {
+    margin-bottom: 18px;
+    width: 100%;
+}
+
+/* Universal Input Styling */
+input[type="text"], 
+input[type="email"],
+input[type="number"],
+input[type="password"] {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--input-border);
+    padding: 10px 0;
+    color: var(--white);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    border-bottom: 1px solid var(--accent-purple);
+}
+
+/* Hide arrows on Year of Admission (Number input) */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 0;
+    bottom: 10px;
+    cursor: pointer;
+    color: var(--text-gray);
+    font-size: 1rem;
+    user-select: none;
+}
+
+/* Submit Button */
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--accent-purple);
+    border: none;
+    border-radius: 8px;
+    color: var(--white);
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: transform 0.2s, opacity 0.3s;
+}
+
+.login-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.footer-links {
+    margin-top: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--text-gray);
+}
+
+.signup-btn {
+    background: #333;
+    border: none;
+    color: var(--white);
+    padding: 6px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Right Illustration Panel */
+.welcome-section {
+    flex: 1;
+    background-color: var(--accent-purple);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
+
+.welcome-section .content {
+    color: var(--white);
+    max-width: 320px;
+}
+
+.welcome-section h2 {
+    font-size: 2.2rem;
+    line-height: 1.2;
+    margin-bottom: 20px;
+}
+
+.welcome-section p {
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+.illustration img {
+    width: 100%;
+    margin-top: 40px;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+}
+
+/* Responsive */
+@media (max-width: 850px) {
+    .container {
+        flex-direction: column;
+        width: 100%;
+    }
+    .welcome-section {
+        display: none;
+    }
+}
