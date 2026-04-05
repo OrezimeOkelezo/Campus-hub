@@ -13,7 +13,7 @@
         <div class="login-section">
             <div class="form-wrapper">
                 <h1>Forgotten Password</h1>
-                <p class="subtitle">Enter your account details to receive a reset link</p>
+                <p class="subtitle">Enter your details to verify your account</p>
 
                 <form id="resetForm">
                     <div class="input-group">
@@ -25,6 +25,8 @@
                             <input type="text" id="matricNo" placeholder="Matric No" required>
                         </div>
                     </div>
+
+                    <div id="statusBox" style="display:none; font-size:0.85rem; margin-bottom:10px; padding:8px; border-radius:5px;"></div>
 
                     <a href="login.html" class="forgot-link">Remembered Password?</a>
 
@@ -52,37 +54,62 @@
     </div>
 
     <script>
-        // 1. INITIALIZE SUPABASE
         const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const resetForm = document.getElementById('resetForm');
         const resetBtn = document.getElementById('resetBtn');
+        const statusBox = document.getElementById('statusBox');
 
-        // 2. HANDLE RESET REQUEST
+        function updateStatus(msg, isError = true) {
+            statusBox.innerText = msg;
+            statusBox.style.display = "block";
+            statusBox.style.backgroundColor = isError ? "rgba(255,0,0,0.1)" : "rgba(0,255,0,0.1)";
+            statusBox.style.color = isError ? "#ff4d4d" : "#2ecc71";
+        }
+
         resetForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const email = document.getElementById('email').value.trim();
+            const matric = document.getElementById('matricNo').value.trim();
 
-            // Loading state
-            resetBtn.innerText = "Sending...";
+            resetBtn.innerText = "Verifying...";
             resetBtn.disabled = true;
+            statusBox.style.display = "none";
 
-            const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                // IMPORTANT: Change this to your actual hosted URL or local dev URL
-                // This is where the user lands after clicking the email link
-                redirectTo: window.location.origin + '/update-password.html',
-            });
+            try {
+                // 1. CHECK IF EMAIL & MATRIC EXIST IN DATABASE
+                // Note: Ensure your table is named 'profiles' and columns match
+                const { data: profile, error: queryError } = await _supabase
+                    .from('profiles') 
+                    .select('email')
+                    .eq('email', email)
+                    .eq('matric_no', matric)
+                    .maybeSingle();
 
-            if (error) {
-                alert("Error: " + error.message);
+                if (queryError) throw queryError;
+
+                if (!profile) {
+                    throw new Error("No matching account found with these details.");
+                }
+
+                // 2. IF FOUND, SEND RESET LINK
+                resetBtn.innerText = "Sending Link...";
+                const { error: resetError } = await _supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/pass.html',
+                });
+
+                if (resetError) throw resetError;
+
+                updateStatus("Success! Reset link sent to your email.", false);
+                resetBtn.innerText = "Link Sent ✅";
+
+            } catch (err) {
+                updateStatus(err.message);
                 resetBtn.innerText = "Request Link";
                 resetBtn.disabled = false;
-            } else {
-                alert("Check your email! A password reset link has been sent.");
-                resetBtn.innerText = "Link Sent ✅";
             }
         });
     </script>
