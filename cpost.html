@@ -16,7 +16,7 @@
             <div class="nav-left">
                 <a href="home.html" class="back-btn">
                     <i class="fa-solid fa-arrow-left"></i> 
-                    <span>Create Post</span>
+                    <span>Cancel</span>
                 </a>
             </div>
             <div class="nav-right">
@@ -27,7 +27,7 @@
 
     <main class="create-post-container">
         <div class="post-header-info">
-            <img src="" alt="User" class="avatar" id="currentUserAvatar">
+            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="User" class="avatar" id="currentUserAvatar">
             <span class="user-name" id="currentUserName">Loading...</span>
         </div>
 
@@ -60,28 +60,22 @@
         const imageGrid = document.getElementById('imageGrid');
         const imgCount = document.getElementById('imgCount');
         
-        let selectedFiles = []; // Actual File objects for upload
-        let previewUrls = [];   // URLs for UI display
+        let selectedFiles = []; 
+        let previewUrls = [];   
         let currentUser = null;
 
-        const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-        // 2. LOAD USER DATA ON START
+        // 2. LOAD USER
         async function init() {
             const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) {
-                window.location.href = "sign.html";
-                return;
-            }
+            if (!user) { window.location.href = "sign.html"; return; }
             currentUser = user;
             
-            // Update UI with metadata
             document.getElementById('currentUserName').innerText = user.user_metadata.full_name;
-            document.getElementById('currentUserAvatar').src = user.user_metadata.avatar || DEFAULT_AVATAR;
+            document.getElementById('currentUserAvatar').src = user.user_metadata.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         }
         init();
 
-        // 3. IMAGE PREVIEW LOGIC
+        // 3. IMAGE LOGIC
         imageUpload.addEventListener('change', function(e) {
             const files = Array.from(e.target.files);
             const availableSlots = 4 - selectedFiles.length;
@@ -90,7 +84,6 @@
                 selectedFiles.push(file);
                 previewUrls.push(URL.createObjectURL(file));
             });
-
             renderImages();
         });
 
@@ -125,68 +118,59 @@
             renderImages();
         };
 
-        // 4. VALIDATION
+        // 4. VALIDATION & PURPLE BUTTON TOGGLE
         function checkPostValidity() {
             const hasText = postContent.value.trim().length >= 3;
             const hasImages = selectedFiles.length > 0;
-            postSubmitBtn.disabled = !(hasText || hasImages);
+            const isValid = hasText || hasImages;
+
+            postSubmitBtn.disabled = !isValid;
+            
+            if (isValid) {
+                postSubmitBtn.classList.add('active'); // CSS will turn this purple
+            } else {
+                postSubmitBtn.classList.remove('active');
+            }
         }
         postContent.addEventListener('input', checkPostValidity);
 
-        // 5. POST SUBMISSION LOGIC
+        // 5. POST SUBMIT (RLS FIX)
         postSubmitBtn.onclick = async () => {
             postSubmitBtn.disabled = true;
             postSubmitBtn.innerText = "Posting...";
 
             try {
                 let uploadedUrls = [];
-
-                // A. Upload Images to Supabase Storage (Bucket name: 'post_images')
                 for (let file of selectedFiles) {
-                    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                    const { data: uploadData, error: uploadError } = await _supabase.storage
+                    const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+                    const { data, error } = await _supabase.storage
                         .from('post_images')
                         .upload(`${currentUser.id}/${fileName}`, file);
 
-                    if (uploadError) throw uploadError;
-
-                    const { data: { publicUrl } } = _supabase.storage
-                        .from('post_images')
-                        .getPublicUrl(uploadData.path);
-                    
+                    if (error) throw error;
+                    const { data: { publicUrl } } = _supabase.storage.from('post_images').getPublicUrl(data.path);
                     uploadedUrls.push(publicUrl);
                 }
 
-                // B. Prepare row data exactly as you requested
-                const postData = {
+                const { error: dbError } = await _supabase.from('posts').insert([{
+                    uid: currentUser.id, // CRITICAL FOR RLS
+                    author_name: currentUser.user_metadata.full_name,
+                    author_avatar: currentUser.user_metadata.avatar,
                     text: postContent.value.trim(),
-                    key: Math.floor(Math.random() * 5) + 1, // Random 1-5
-                    uid: currentUser.id,
-                    author_name: currentUser.user_metadata.full_name, // Helper for feed
-                    author_avatar: currentUser.user_metadata.avatar, // Helper for feed
-                    pic: uploadedUrls.length > 0 ? uploadedUrls[0] : null, // URL string
+                    key: Math.floor(Math.random() * 5) + 1,
+                    pic: uploadedUrls[0] || null,
                     img1: uploadedUrls[0] || null,
                     img2: uploadedUrls[1] || null,
                     img3: uploadedUrls[2] || null,
                     img4: uploadedUrls[3] || null,
-                    comment: 0,
-                    like: 0,
-                    dislike: 0,
-                    report: 0
-                };
-
-                // C. Save to Table 'posts'
-                const { error: dbError } = await _supabase
-                    .from('posts')
-                    .insert([postData]);
+                    "like": 0, dislike: 0, report: 0, comment: 0
+                }]);
 
                 if (dbError) throw dbError;
-
-                alert("Post successful!");
                 window.location.href = "home.html";
 
             } catch (err) {
-                alert("Error: " + err.message);
+                alert("Upload Failed: " + err.message);
                 postSubmitBtn.disabled = false;
                 postSubmitBtn.innerText = "Post";
             }
