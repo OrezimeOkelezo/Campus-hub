@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/create.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
     <div class="container">
@@ -40,6 +41,11 @@
                             <span class="toggle-password" onclick="toggleVisibility('confirmPassword', this)">👁️</span>
                         </div>
                     </div>
+
+                    <div class="input-group" style="display: flex; justify-content: center; margin: 15px 0;">
+                        <div class="g-recaptcha" data-sitekey="6LfyUacsAAAAAHfBH6uq-kY5Fj4agZOC-Lk8o0zn"></div>
+                    </div>
+
                     <button type="submit" id="submitBtn" class="login-btn">Sign Up</button>
                 </form>
 
@@ -76,6 +82,13 @@
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            // 3. VALIDATE CAPTCHA RESPONSE
+            const captchaResponse = grecaptcha.getResponse();
+            if (captchaResponse.length === 0) {
+                alert("Please complete the CAPTCHA first.");
+                return;
+            }
+
             const submitBtn = document.getElementById('submitBtn');
             const password = document.getElementById('password').value;
             const confirmPass = document.getElementById('confirmPassword').value;
@@ -92,8 +105,9 @@
                 email: document.getElementById('email').value,
                 password: password,
                 options: {
-                    // Update this URL to where you want them to go after clicking the email link
                     emailRedirectTo: window.location.origin + '/sign.html',
+                    // Pass the captcha token to Supabase for verification
+                    captchaToken: captchaResponse,
                     data: {
                         full_name: document.getElementById('name').value,
                         matric_no: document.getElementById('matricNo').value,
@@ -112,6 +126,7 @@
                 alert("Error: " + error.message);
                 submitBtn.innerText = "Sign Up";
                 submitBtn.disabled = false;
+                grecaptcha.reset(); // Reset captcha so they can try again
             } else {
                 alert("Account created! Please check your email to verify your account.");
                 window.location.href = "sent.html";

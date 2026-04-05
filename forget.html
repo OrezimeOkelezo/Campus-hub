@@ -6,14 +6,16 @@
     <title>Student Connect - Forgotten Password</title>
     <link rel="stylesheet" href="css/sign.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
     <div class="container">
         <div class="login-section">
             <div class="form-wrapper">
                 <h1>Forgotten Password</h1>
-                <p class="subtitle">Enter your details to verify your account</p>
+                <p class="subtitle">Verify your identity to receive a reset link</p>
 
                 <form id="resetForm">
                     <div class="input-group">
@@ -26,7 +28,11 @@
                         </div>
                     </div>
 
-                    <div id="statusBox" style="display:none; font-size:0.85rem; margin-bottom:10px; padding:8px; border-radius:5px;"></div>
+                    <div class="input-group" style="display: flex; justify-content: center; margin: 15px 0;">
+                        <div class="g-recaptcha" data-sitekey="6LfyUacsAAAAAHfBH6uq-kY5Fj4agZOC-Lk8o0zn"></div>
+                    </div>
+
+                    <div id="statusBox" style="display:none; font-size:0.85rem; margin-bottom:10px; padding:10px; border-radius:5px;"></div>
 
                     <a href="login.html" class="forgot-link">Remembered Password?</a>
 
@@ -44,19 +50,20 @@
 
         <div class="welcome-section">
             <div class="content">
-                <h2>Forgotten your password</h2>
-                <p>Request for a reset link to gain access again</p>
+                <h2>Security Check</h2>
+                <p>We need to verify you are a student and not a robot.</p>
                 <div class="illustration">
-                    <img src="img/img1.png" alt="Illustration">
+                    <img src="img/img1.png" alt="Security">
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = supabase.createClient(
+            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
+            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
+        );
 
         const resetForm = document.getElementById('resetForm');
         const resetBtn = document.getElementById('resetBtn');
@@ -65,13 +72,20 @@
         function updateStatus(msg, isError = true) {
             statusBox.innerText = msg;
             statusBox.style.display = "block";
-            statusBox.style.backgroundColor = isError ? "rgba(255,0,0,0.1)" : "rgba(0,255,0,0.1)";
+            statusBox.style.backgroundColor = isError ? "rgba(255, 77, 77, 0.1)" : "rgba(46, 204, 113, 0.1)";
             statusBox.style.color = isError ? "#ff4d4d" : "#2ecc71";
         }
 
         resetForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // 1. CAPTCHA VERIFICATION
+            const captchaResponse = grecaptcha.getResponse();
+            if (captchaResponse.length === 0) {
+                updateStatus("Please complete the CAPTCHA first.");
+                return;
+            }
+
             const email = document.getElementById('email').value.trim();
             const matric = document.getElementById('matricNo').value.trim();
 
@@ -80,8 +94,7 @@
             statusBox.style.display = "none";
 
             try {
-                // 1. CHECK IF EMAIL & MATRIC EXIST IN DATABASE
-                // Note: Ensure your table is named 'profiles' and columns match
+                // 2. CHECK DATABASE FOR ACCOUNT (Verify profiles table)
                 const { data: profile, error: queryError } = await _supabase
                     .from('profiles') 
                     .select('email')
@@ -92,24 +105,27 @@
                 if (queryError) throw queryError;
 
                 if (!profile) {
-                    throw new Error("No matching account found with these details.");
+                    throw new Error("Account details do not match our records.");
                 }
 
-                // 2. IF FOUND, SEND RESET LINK
+                // 3. SEND RESET LINK
                 resetBtn.innerText = "Sending Link...";
                 const { error: resetError } = await _supabase.auth.resetPasswordForEmail(email, {
+                    // This must match your password reset file name
                     redirectTo: window.location.origin + '/pass.html',
+                    captchaToken: captchaResponse 
                 });
 
                 if (resetError) throw resetError;
 
-                updateStatus("Success! Reset link sent to your email.", false);
-                resetBtn.innerText = "Link Sent ✅";
+                updateStatus("Verification successful! Check your email.", false);
+                resetBtn.innerText = "Sent ✅";
 
             } catch (err) {
                 updateStatus(err.message);
                 resetBtn.innerText = "Request Link";
                 resetBtn.disabled = false;
+                grecaptcha.reset(); 
             }
         });
     </script>

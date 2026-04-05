@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Post - Student Connect</title>
+    <link rel="stylesheet" href="css/cpost.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <header class="top-nav">
+        <div class="header-inner">
+            <div class="nav-left">
+                <a href="home.html" class="back-btn">
+                    <i class="fa-solid fa-arrow-left"></i> 
+                    <span>Create Post</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <button id="postSubmitBtn" disabled>Post</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="create-post-container">
+        <div class="post-header-info">
+            <img src="" alt="User" class="avatar" id="currentUserAvatar">
+            <span class="user-name" id="currentUserName">Loading...</span>
+        </div>
+
+        <textarea id="postContent" rows="6" placeholder="What's on your mind?"></textarea>
+
+        <div class="media-section">
+            <h4 class="media-title">Add images <span id="imgCount">(0/4)</span></h4>
+            
+            <div class="image-grid" id="imageGrid">
+                <label for="imageUpload" class="add-image-btn" id="addImageLabel">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Select image</span>
+                </label>
+            </div>
+            
+            <input type="file" id="imageUpload" accept="image/*" multiple hidden>
+        </div>
+    </main>
+
+    <script>
+        // 1. INITIALIZE SUPABASE
+        const _supabase = supabase.createClient(
+            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
+            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
+        );
+
+        const postContent = document.getElementById('postContent');
+        const postSubmitBtn = document.getElementById('postSubmitBtn');
+        const imageUpload = document.getElementById('imageUpload');
+        const imageGrid = document.getElementById('imageGrid');
+        const imgCount = document.getElementById('imgCount');
+        
+        let selectedFiles = []; // Actual File objects for upload
+        let previewUrls = [];   // URLs for UI display
+        let currentUser = null;
+
+        const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+        // 2. LOAD USER DATA ON START
+        async function init() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) {
+                window.location.href = "sign.html";
+                return;
+            }
+            currentUser = user;
+            
+            // Update UI with metadata
+            document.getElementById('currentUserName').innerText = user.user_metadata.full_name;
+            document.getElementById('currentUserAvatar').src = user.user_metadata.avatar || DEFAULT_AVATAR;
+        }
+        init();
+
+        // 3. IMAGE PREVIEW LOGIC
+        imageUpload.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            const availableSlots = 4 - selectedFiles.length;
+            
+            files.slice(0, availableSlots).forEach(file => {
+                selectedFiles.push(file);
+                previewUrls.push(URL.createObjectURL(file));
+            });
+
+            renderImages();
+        });
+
+        function renderImages() {
+            imageGrid.innerHTML = ''; 
+            previewUrls.forEach((src, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'image-preview-wrapper';
+                wrapper.innerHTML = `
+                    <img src="${src}" class="preview-img">
+                    <button class="remove-img-btn" type="button" onclick="removeImage(${index})">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                imageGrid.appendChild(wrapper);
+            });
+
+            if (previewUrls.length < 4) {
+                const addBtn = document.createElement('label');
+                addBtn.className = 'add-image-btn';
+                addBtn.setAttribute('for', 'imageUpload');
+                addBtn.innerHTML = `<i class="fa-solid fa-plus"></i><span>Select image</span>`;
+                imageGrid.appendChild(addBtn);
+            }
+            imgCount.innerText = `(${previewUrls.length}/4)`;
+            checkPostValidity();
+        }
+
+        window.removeImage = function(index) {
+            selectedFiles.splice(index, 1);
+            previewUrls.splice(index, 1);
+            renderImages();
+        };
+
+        // 4. VALIDATION
+        function checkPostValidity() {
+            const hasText = postContent.value.trim().length >= 3;
+            const hasImages = selectedFiles.length > 0;
+            postSubmitBtn.disabled = !(hasText || hasImages);
+        }
+        postContent.addEventListener('input', checkPostValidity);
+
+        // 5. POST SUBMISSION LOGIC
+        postSubmitBtn.onclick = async () => {
+            postSubmitBtn.disabled = true;
+            postSubmitBtn.innerText = "Posting...";
+
+            try {
+                let uploadedUrls = [];
+
+                // A. Upload Images to Supabase Storage (Bucket name: 'post_images')
+                for (let file of selectedFiles) {
+                    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const { data: uploadData, error: uploadError } = await _supabase.storage
+                        .from('post_images')
+                        .upload(`${currentUser.id}/${fileName}`, file);
+
+                    if (uploadError) throw uploadError;
+
+                    const { data: { publicUrl } } = _supabase.storage
+                        .from('post_images')
+                        .getPublicUrl(uploadData.path);
+                    
+                    uploadedUrls.push(publicUrl);
+                }
+
+                // B. Prepare row data exactly as you requested
+                const postData = {
+                    text: postContent.value.trim(),
+                    key: Math.floor(Math.random() * 5) + 1, // Random 1-5
+                    uid: currentUser.id,
+                    author_name: currentUser.user_metadata.full_name, // Helper for feed
+                    author_avatar: currentUser.user_metadata.avatar, // Helper for feed
+                    pic: uploadedUrls.length > 0 ? uploadedUrls[0] : null, // URL string
+                    img1: uploadedUrls[0] || null,
+                    img2: uploadedUrls[1] || null,
+                    img3: uploadedUrls[2] || null,
+                    img4: uploadedUrls[3] || null,
+                    comment: 0,
+                    like: 0,
+                    dislike: 0,
+                    report: 0
+                };
+
+                // C. Save to Table 'posts'
+                const { error: dbError } = await _supabase
+                    .from('posts')
+                    .insert([postData]);
+
+                if (dbError) throw dbError;
+
+                alert("Post successful!");
+                window.location.href = "home.html";
+
+            } catch (err) {
+                alert("Error: " + err.message);
+                postSubmitBtn.disabled = false;
+                postSubmitBtn.innerText = "Post";
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Connect - Email Sent</title>
+  <link rel="stylesheet" href="css/sent.css">
+  <link href="https:                                                                                           
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="message-section">
+      <div class="icon">📨</div>
+      <h1>Email Sent!</h1>
+      <p>Please check your email to verify your account.</p>
+      <button class="login-btn" id="loginBtn">Proceed to Login</button>
+    </div>
+  </div>
+  <script>
+    document.getElementById('loginBtn').addEventListener('click', function() {
+      window.location.href = 'sign.html';
+    });
+  </script>
+</body>
+</html>
