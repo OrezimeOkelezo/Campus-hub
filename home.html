@@ -14,7 +14,7 @@
     <header class="top-nav">
         <div class="header-inner">
             <div class="nav-left">
-                <h2 id="userGreeting">Hi, Loading...</h2>
+                <h2 id="userGreeting">Hi, Student</h2>
             </div>
             <div class="nav-right">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -25,8 +25,9 @@
 
     <div class="app-layout">
         <main class="feed-container" id="postsFeed">
-            <div class="loading-spinner" style="text-align: center; padding: 20px;">
-                <p>Loading Feed...</p>
+            <div class="loading-spinner" style="text-align: center; padding: 40px; color: #888;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                <p>Fetching latest posts...</p>
             </div>
         </main>
 
@@ -34,8 +35,8 @@
             <div class="cover-photo"></div>
             <div class="profile-card">
                 <img src="" alt="Me" class="profile-img" id="drawerAvatar">
-                <h3 id="drawerName">Student Name</h3>
-                <p class="email" id="drawerEmail">email@student.com</p>
+                <h3 id="drawerName">Loading...</h3>
+                <p class="email" id="drawerEmail">...</p>
             </div>
             <nav class="menu">
                 <a href="home.html" class="active-link"><i class="fa-solid fa-house"></i> Home</a>
@@ -51,6 +52,18 @@
         <i class="fa-solid fa-plus"></i>
     </a>
 
+    <div id="logoutModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <h3>Sign Out?</h3>
+            <p>You'll need to login again to access your student feed.</p>
+            <div class="modal-actions">
+                <button id="cancelLogout" class="btn-secondary">Stay</button>
+                <button id="confirmLogout" class="btn-danger">Logout</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 1. INITIALIZE SUPABASE
         const _supabase = supabase.createClient(
@@ -65,18 +78,16 @@
             const { data: { user }, error } = await _supabase.auth.getUser();
 
             if (error || !user) {
-                window.location.href = "sign.html"; // Not logged in? Send to login
+                window.location.href = "sign.html"; 
                 return;
             }
 
             const metadata = user.user_metadata;
-            const firstName = metadata.full_name.split(' ')[0]; // Gets just the first name
+            const firstName = metadata.full_name ? metadata.full_name.split(' ')[0] : "Student";
 
-            // Update Top Nav
+            // Update UI Elements
             document.getElementById('userGreeting').innerText = `Hi, ${firstName}`;
-
-            // Update Drawer (Side Panel)
-            document.getElementById('drawerName').innerText = metadata.full_name;
+            document.getElementById('drawerName').innerText = metadata.full_name || "User";
             document.getElementById('drawerEmail').innerText = user.email;
             
             const avatarImg = document.getElementById('drawerAvatar');
@@ -88,16 +99,22 @@
             const feed = document.getElementById('postsFeed');
             
             const { data: posts, error } = await _supabase
-                .from('posts') // Ensure your table is named 'posts'
+                .from('posts') 
                 .select('*')
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error("Error loading posts:", error);
+                feed.innerHTML = `<p style="padding:20px; color:#ff5e5e;">Error loading feed: ${error.message}</p>`;
                 return;
             }
+             
 
-            feed.innerHTML = ''; // Clear loading spinner
+            feed.innerHTML = ''; 
+
+            if (posts.length === 0) {
+                feed.innerHTML = `<p style="padding:40px; text-align:center; color:#555;">No posts yet. Be the first to share something!</p>`;
+                return;
+            }
 
             posts.forEach(post => {
                 const postHTML = `
@@ -119,7 +136,7 @@
                             </a>
                             <div class="post-actions-static">
                                 <span class="stat-item"><i class="fa-regular fa-thumbs-up"></i> ${post.likes || 0}</span>
-                                <span class="stat-item"><i class="fa-regular fa-thumbs-down"></i> ${post.dislikes || 0}</span>
+                                <span class="stat-item"><i class="fa-regular fa-thumbs-down"></i></span>
                                 <span class="stat-item"><i class="fa-regular fa-comment"></i> ${post.comments_count || 0}</span>
                             </div>
                         </div>
@@ -129,11 +146,33 @@
             });
         }
 
-        // 4. LOGOUT LOGIC
-        document.getElementById('logoutBtn').onclick = async (e) => {
+        // 4. LOGOUT & MODAL LOGIC
+        const logoutBtn = document.getElementById('logoutBtn');
+        const logoutModal = document.getElementById('logoutModal');
+        const confirmLogout = document.getElementById('confirmLogout');
+        const cancelLogout = document.getElementById('cancelLogout');
+
+        logoutBtn.onclick = (e) => {
             e.preventDefault();
-            const { error } = await _supabase.auth.signOut();
+            logoutModal.classList.add('show');
+            sidePanel.classList.remove('active'); // Close mobile menu
+        };
+
+        cancelLogout.onclick = () => {
+            logoutModal.classList.remove('show');
+        };
+
+        confirmLogout.onclick = async () => {
+            confirmLogout.innerText = "Signing out...";
+            await _supabase.auth.signOut();
             window.location.href = "sign.html";
+        };
+
+        // Close modal if user clicks outside the white box
+        window.onclick = (e) => {
+            if (e.target == logoutModal) {
+                logoutModal.classList.remove('show');
+            }
         };
 
         // 5. DRAWER TOGGLE LOGIC
@@ -145,13 +184,13 @@
             sidePanel.classList.toggle('active');
         };
 
-        document.onclick = (e) => {
+        document.addEventListener('click', (e) => {
             if (!sidePanel.contains(e.target) && !menuToggle.contains(e.target)) {
                 sidePanel.classList.remove('active');
             }
-        };
+        });
 
-        // Initialize Page
+           // Initialize Page
         window.onload = () => {
             loadUserData();
             loadPosts();
