@@ -1,0 +1,73 @@
+:root {
+  --bg-dark: #1a1a1a;
+  --accent-purple: #a881ff;
+  --text-gray: #888;
+  --white: #ffffff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background-color: #121212;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 400px;
+  min-height: 400px;
+  background-color: var(--bg-dark);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  padding: 40px;
+}
+
+.message-section {
+  text-align: center;
+}
+
+.icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+h1 {
+  color: var(--white);
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+p {
+  color: var(--text-gray);
+  font-size: 0.95rem;
+  margin-bottom: 30px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  background-color: var(--accent-purple);
+  border: none;
+  border-radius: 8px;
+  color: var(--white);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.3s;
+}
+
+.login-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
