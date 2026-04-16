@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Drawer-specific styles removed */
         .nav-right { display: flex; align-items: center; }
         
         /* FAB Styling */
@@ -20,9 +19,24 @@
             border-radius: 50%; display: flex; align-items: center;
             justify-content: center; color: white; font-size: 1.5rem;
             box-shadow: 0 4px 12px rgba(168, 129, 255, 0.4);
-            text-decoration: none; z-index: 999; display: none; /* Hidden by default */
+            text-decoration: none; z-index: 999; display: none; 
         }
-        /* Visibility Classes */
+
+        /* Typography distinction for Posts */
+        .user-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #a881ff; /* Changed to Purple */
+            display: block;
+        }
+
+        .post-text {
+            font-size: 0.92rem;
+            color: #dddddd;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
         .hidden { display: none !important; }
     </style>
 </head>
@@ -38,13 +52,6 @@
             </div>
             
             <div class="nav-right">
-                <div class="more-container hidden" id="moreContainer">
-                    <i class="fa-solid fa-ellipsis-vertical" id="moreBtn" style="cursor:pointer; padding: 5px;"></i>
-                    <div class="dropdown-menu" id="profileDropdown">
-                        <a href="#"><i class="fa-solid fa-user-slash"></i> Block</a>
-                        <a href="#" id="reportTrigger"><i class="fa-solid fa-flag"></i> Report</a>
-                    </div>
-                </div>
                 </div>
         </div>
     </header>
@@ -73,8 +80,7 @@
             <h3 class="section-label">Posts</h3>
             <div id="userPostsContainer"></div>
         </main>
-
-        </div>
+    </div>
 
     <a href="#" class="mobile-fab" id="followFab">
         <i class="fa-solid fa-user-plus"></i>
@@ -95,25 +101,19 @@
             const targetUid = urlParams.get('uid') || currentUser.id;
             const isOwnProfile = (targetUid === currentUser.id);
 
-            // Fetch Target User Profile
             const { data: profile } = await supa.from('profiles').select('*').eq('id', targetUid).single();
             const name = profile?.full_name || "Student";
             const avatar = profile?.avatar_url || DEFAULT_AVATAR;
 
-            // UI Update
             document.getElementById("mainName").innerText = name;
             document.getElementById("mainAvatar").src = avatar;
             document.getElementById("mainBio").innerText = profile?.bio || "Student Connect Member";
             
-            // Sidebar update logic removed
-
             if (!isOwnProfile) {
-                document.getElementById("moreContainer").classList.remove("hidden");
                 document.getElementById("followFab").style.display = "flex";
             }
 
             loadUserPosts(targetUid, name, avatar);
-            setupUI();
         }
 
         async function loadUserPosts(uid, name, avatar) {
@@ -169,22 +169,6 @@
                 `;
                 container.appendChild(div);
             });
-        }
-
-        function setupUI() {
-            const moreBtn = document.getElementById('moreBtn');
-            const dropdown = document.getElementById('profileDropdown');
-
-            if (moreBtn) {
-                moreBtn.onclick = e => { 
-                    e.stopPropagation(); 
-                    dropdown.classList.toggle('active'); 
-                };
-            }
-
-            document.onclick = e => {
-                if (moreBtn && !moreBtn.contains(e.target)) dropdown.classList.remove('active');
-            };
         }
 
         window.onload = init;
