@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Connect - Forgotten Password</title>
+    <link rel="stylesheet" href="css/sign.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="login-section">
+            <div class="form-wrapper">
+                <h1>Forgotten Password</h1>
+                <p class="subtitle">Verify your identity to receive a reset link</p>
+
+                <form id="resetForm">
+                    <div class="input-group">
+                        <input type="email" id="email" placeholder="Email Address" required>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="matric">
+                            <input type="text" id="matricNo" placeholder="Matric No" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group" style="display: flex; justify-content: center; margin: 15px 0;">
+                        <div class="g-recaptcha" data-sitekey="6LfyUacsAAAAAHfBH6uq-kY5Fj4agZOC-Lk8o0zn"></div>
+                    </div>
+
+                    <div id="statusBox" style="display:none; font-size:0.85rem; margin-bottom:10px; padding:10px; border-radius:5px;"></div>
+
+                    <a href="login.html" class="forgot-link">Remembered Password?</a>
+
+                    <button type="submit" class="login-btn" id="resetBtn">Request Link</button>
+                </form>
+
+                <div class="footer-links">
+                    <span>Don't have an account?</span>
+                    <a href="create.html">
+                        <button type="button" class="signup-btn">Sign up</button>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="welcome-section">
+            <div class="content">
+                <h2>Security Check</h2>
+                <p>We need to verify you are a student and not a robot.</p>
+                <div class="illustration">
+                    <img src="img/img1.png" alt="Security">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const _supabase = supabase.createClient(
+            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
+            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
+        );
+
+        const resetForm = document.getElementById('resetForm');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusBox = document.getElementById('statusBox');
+
+        function updateStatus(msg, isError = true) {
+            statusBox.innerText = msg;
+            statusBox.style.display = "block";
+            statusBox.style.backgroundColor = isError ? "rgba(255, 77, 77, 0.1)" : "rgba(46, 204, 113, 0.1)";
+            statusBox.style.color = isError ? "#ff4d4d" : "#2ecc71";
+        }
+
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // 1. CAPTCHA VERIFICATION
+            const captchaResponse = grecaptcha.getResponse();
+            if (captchaResponse.length === 0) {
+                updateStatus("Please complete the CAPTCHA first.");
+                return;
+            }
+
+            const email = document.getElementById('email').value.trim();
+            const matric = document.getElementById('matricNo').value.trim();
+
+            resetBtn.innerText = "Verifying...";
+            resetBtn.disabled = true;
+            statusBox.style.display = "none";
+
+            try {
+                // 2. CHECK DATABASE FOR ACCOUNT (Verify profiles table)
+                // Note: Ensure RLS 'Select' policy is enabled for public on the profiles table
+                const { data: profile, error: queryError } = await _supabase
+                    .from('profiles') 
+                    .select('id')
+                    .eq('email', email)
+                    .eq('matric_no', matric)
+                    .maybeSingle();
+
+                if (queryError) throw queryError;
+
+                if (!profile) {
+                    throw new Error("The Email or Matric Number does not match our records.");
+                }
+
+                // 3. SEND RESET LINK
+                resetBtn.innerText = "Sending Link...";
+                const { error: resetError } = await _supabase.auth.resetPasswordForEmail(email, {
+                    // Make sure this URL is whitelisted in Supabase > Auth > URL Configuration
+                    redirectTo: window.location.origin + '/pass.html',
+                    captchaToken: captchaResponse 
+                });
+
+                if (resetError) throw resetError;
+
+                updateStatus("Verification successful! Check your email for the reset link.", false);
+                resetBtn.innerText = "Sent ✅";
+
+            } catch (err) {
+                console.error("Auth Error:", err.message);
+                updateStatus(err.message || "An error occurred. Please try again.");
+                resetBtn.innerText = "Request Link";
+                resetBtn.disabled = false;
+                grecaptcha.reset(); 
+            }
+        });
+    </script>
+</body>
+</html>
