@@ -10,22 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .side-panel {
-            position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
-            background: #121212; z-index: 4000; transition: 0.3s ease;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
-        }
-        .side-panel.active { right: 0; }
-        .close-drawer {
-            position: absolute; top: 20px; left: 20px;
-            font-size: 1.5rem; color: white; cursor: pointer; z-index: 4001;
-        }
-        .profile-card { text-align: center; padding: 50px 10px 20px; }
-        .profile-img-side {
-            width: 85px; height: 85px; border-radius: 50%;
-            object-fit: cover; border: 3px solid #a881ff;
-            margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;
-        }
+        /* Drawer-specific styles removed */
+        .nav-right { display: flex; align-items: center; }
+        
         /* FAB Styling */
         .mobile-fab {
             position: fixed; bottom: 25px; right: 25px;
@@ -58,10 +45,7 @@
                         <a href="#" id="reportTrigger"><i class="fa-solid fa-flag"></i> Report</a>
                     </div>
                 </div>
-                <div class="icon-btn" id="menuToggle" style="cursor: pointer; margin-left: 15px;">
-                    <i class="fa-solid fa-bars"></i>
                 </div>
-            </div>
         </div>
     </header>
 
@@ -90,22 +74,7 @@
             <div id="userPostsContainer"></div>
         </main>
 
-        <aside class="side-panel" id="sidePanel">
-            <i class="fa-solid fa-xmark close-drawer" id="closeDrawer"></i>
-            <div class="cover-photo"></div>
-            <div class="profile-card">
-                <img id="sideAvatar" class="profile-img-side" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
-                <h3 id="sideName">Username</h3>
-                <p id="sideEmail">email@email.com</p>
-            </div>
-            <nav class="menu">
-                <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="cpost.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>
-                <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>
-                <a href="#" id="logoutTrigger" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-            </nav>
-        </aside>
-    </div>
+        </div>
 
     <a href="#" class="mobile-fab" id="followFab">
         <i class="fa-solid fa-user-plus"></i>
@@ -122,10 +91,8 @@
             const { data: { user: currentUser } } = await supa.auth.getUser();
             if (!currentUser) return window.location.href = "sign.html";
 
-            // Get UID from URL (profile.html?uid=...) or fallback to Current User
             const urlParams = new URLSearchParams(window.location.search);
             const targetUid = urlParams.get('uid') || currentUser.id;
-
             const isOwnProfile = (targetUid === currentUser.id);
 
             // Fetch Target User Profile
@@ -138,19 +105,15 @@
             document.getElementById("mainAvatar").src = avatar;
             document.getElementById("mainBio").innerText = profile?.bio || "Student Connect Member";
             
-            // Sidebar updates (Always show Current User's info in sidebar)
-            const { data: myProfile } = await supa.from('profiles').select('*').eq('id', currentUser.id).single();
-            document.getElementById("sideName").innerText = myProfile?.full_name || "Me";
-            document.getElementById("sideAvatar").src = myProfile?.avatar_url || DEFAULT_AVATAR;
-            document.getElementById("sideEmail").innerText = currentUser.email;
+            // Sidebar update logic removed
 
-            // Logic for More Button and FAB
             if (!isOwnProfile) {
                 document.getElementById("moreContainer").classList.remove("hidden");
                 document.getElementById("followFab").style.display = "flex";
             }
 
             loadUserPosts(targetUid, name, avatar);
+            setupUI();
         }
 
         async function loadUserPosts(uid, name, avatar) {
@@ -208,26 +171,21 @@
             });
         }
 
-        // --- Basic UI Controls ---
-        const menuToggle = document.getElementById('menuToggle');
-        const sidePanel = document.getElementById('sidePanel');
-        const closeDrawer = document.getElementById('closeDrawer');
-        const moreBtn = document.getElementById('moreBtn');
-        const dropdown = document.getElementById('profileDropdown');
+        function setupUI() {
+            const moreBtn = document.getElementById('moreBtn');
+            const dropdown = document.getElementById('profileDropdown');
 
-        menuToggle.onclick = e => { e.stopPropagation(); sidePanel.classList.add('active'); };
-        closeDrawer.onclick = () => sidePanel.classList.remove('active');
-        moreBtn.onclick = e => { e.stopPropagation(); dropdown.classList.toggle('active'); };
+            if (moreBtn) {
+                moreBtn.onclick = e => { 
+                    e.stopPropagation(); 
+                    dropdown.classList.toggle('active'); 
+                };
+            }
 
-        document.onclick = e => {
-            if (!sidePanel.contains(e.target) && e.target !== menuToggle) sidePanel.classList.remove('active');
-            if (!moreBtn.contains(e.target)) dropdown.classList.remove('active');
-        };
-
-        document.getElementById("logoutTrigger").onclick = async () => {
-            await supa.auth.signOut();
-            window.location.href = "sign.html";
-        };
+            document.onclick = e => {
+                if (moreBtn && !moreBtn.contains(e.target)) dropdown.classList.remove('active');
+            };
+        }
 
         window.onload = init;
     </script>

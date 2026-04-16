@@ -38,7 +38,7 @@
             <a href="home.html" class="active-link"><i class="fa-solid fa-house"></i> Home</a>  
             <a href="file.html"><i class="fa-solid fa-folder-open"></i> Files</a>  
             <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>  
-            <a href="#"><i class="fa-solid fa-message"></i> Messages</a>  
+            <a href="#" id="myPostLink"><i class="fa-solid fa-pen-to-square"></i> My post</a>  
             <a href="#" id="logoutTrigger" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>  
         </nav>  
     </aside>  
@@ -84,6 +84,9 @@ async function init() {
         document.getElementById("sideName").innerText = name;
         document.getElementById("sideEmail").innerText = user.email;
         document.getElementById("sideAvatar").src = meta.avatar_url || DEFAULT_AVATAR;
+
+        // Dynamic Link for My post
+        document.getElementById("myPostLink").href = `profile.html?uid=${user.id}`;
 
         loadPosts();
 

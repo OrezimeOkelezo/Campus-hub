@@ -27,8 +27,7 @@
                         <a href="#" onclick="fetchNotifications('comment')"><i class="fa-solid fa-comment"></i> Comments</a>
                     </div>
                 </div>
-                <i class="fa-solid fa-bars" id="menuToggle"></i>
-            </div>
+                </div>
         </div>
     </header>
 
@@ -36,21 +35,7 @@
         <main class="feed-container" id="noticeFeed">
             <div class="loading-state">Fetching your alerts...</div>
         </main>
-
-        <aside class="side-panel" id="sidePanel">
-            <div class="cover-photo"></div>
-            <div class="profile-card">
-                <img id="sideAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-img">
-                <h3 id="sideName">Student</h3>
-                <p id="sideEmail" style="color: #888; font-size: 0.8rem;"></p>
-            </div>
-            <nav class="menu">
-                <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>
-                <a href="#" id="logoutBtn" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-            </nav>
-        </aside>
-    </div>
+        </div>
 
     <script>
         const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
@@ -64,12 +49,6 @@
             if (!user) return window.location.href = "sign.html";
             currentUser = user;
 
-            // Sync Sidebar Profile info
-            const meta = user.user_metadata || {};
-            document.getElementById("sideName").innerText = meta.full_name || "Student";
-            document.getElementById("sideEmail").innerText = user.email;
-            document.getElementById("sideAvatar").src = meta.avatar_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
             fetchNotifications();
             setupUI();
         }
@@ -77,7 +56,6 @@
         async function fetchNotifications(filter = 'all') {
             const feed = document.getElementById("noticeFeed");
             
-            // Querying your specific table structure: sender_id and receiver_id
             let query = supa
                 .from('notifications')
                 .select(`*, profiles:sender_id(full_name, avatar_url)`)
@@ -123,7 +101,6 @@
 
         async function markAsRead(id) {
             await supa.from('notifications').update({ is_read: true }).eq('id', id);
-            // Optional: navigate to the post if post_id exists
         }
 
         function timeAgo(date) {
@@ -142,19 +119,10 @@
                 document.getElementById('sortDropdown').classList.toggle('active');
             };
 
-            document.getElementById('menuToggle').onclick = (e) => {
-                e.stopPropagation();
-                document.getElementById('sidePanel').classList.toggle('active');
-            };
+            // Sidebar toggle logic removed
 
             document.onclick = () => {
                 document.getElementById('sortDropdown').classList.remove('active');
-                document.getElementById('sidePanel').classList.remove('active');
-            };
-
-            document.getElementById("logoutBtn").onclick = async () => {
-                await supa.auth.signOut();
-                window.location.href = "sign.html";
             };
         }
 

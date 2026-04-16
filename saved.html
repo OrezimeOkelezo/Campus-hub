@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmarks - Student Connect</title>
+    <link rel="stylesheet" href="css/home.css">
+    <link rel="stylesheet" href="css/saved.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <header class="top-nav">
+        <div class="header-inner">
+            <div class="nav-left">
+                <a href="home.html" class="back-btn">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <h2 class="page-title">Bookmark</h2>
+            </div>
+            <div class="nav-right">
+                <i class="fa-solid fa-bars" id="menuToggle"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <main class="feed-container">
+            
+            <div class="saved-card">
+                <a href="post.html" class="saved-link-wrapper">
+                    <div class="saved-text">
+                        <span class="category-tag">Technology</span>
+                        <h3 class="saved-title">How to master web development in 2026.</h3>
+                        <div class="saved-meta">
+                            <span>Jul 13 • 5 min read</span>
+                        </div>
+                    </div>
+                    <div class="saved-thumb-container">
+                        <img src="https://images.pexels.com/photos/1410226/pexels-photo-1410226.jpeg?auto=compress&cs=tinysrgb&w=200" alt="post thumbnail">
+                    </div>
+                </a>
+                <button class="unsave-btn" title="Remove Bookmark">
+                    <i class="fa-solid fa-bookmark"></i>
+                </button>
+            </div>
+
+            <div class="saved-card">
+                <a href="post.html" class="saved-link-wrapper">
+                    <div class="saved-text">
+                        <span class="category-tag">Campus</span>
+                        <h3 class="saved-title">Top 10 hidden study spots in the library.</h3>
+                        <div class="saved-meta">
+                            <span>Aug 05 • 3 min read</span>
+                        </div>
+                    </div>
+                    <div class="saved-thumb-container">
+                        <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80" alt="post thumbnail">
+                    </div>
+                </a>
+                <button class="unsave-btn" title="Remove Bookmark">
+                    <i class="fa-solid fa-bookmark"></i>
+                </button>
+            </div>
+
+        </main>
+
+        <aside class="side-panel" id="sidePanel">
+            <div class="cover-photo"></div>
+            <div class="profile-card">
+                <img src="https://i.pravatar.cc/150?u=orezime" alt="Me" class="profile-img">
+                <h3>Orezime Okelezo</h3>
+                <p class="email">orezimeokelezo94@gmail.com</p>
+            </div>
+            <nav class="menu">
+                <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>
+                <a href="profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+                <a href="notice.html"><i class="fa-solid fa-bell"></i> Notifications</a>
+                <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>
+                <a href="sign.html" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </nav>
+        </aside>
+    </div>
+
+    <script>
+        const menuToggle = document.getElementById('menuToggle');
+        const sidePanel = document.getElementById('sidePanel');
+
+        menuToggle.onclick = (e) => {
+            e.stopPropagation();
+            sidePanel.classList.toggle('active');
+        };
+
+        document.onclick = (e) => {
+            if (!sidePanel.contains(e.target) && e.target !== menuToggle) {
+                sidePanel.classList.remove('active');
+            }
+        };
+
+        // Simple logic to "remove" item from view (UI only)
+        document.querySelectorAll('.unsave-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                btn.parentElement.style.opacity = '0';
+                setTimeout(() => btn.parentElement.remove(), 300);
+            };
+        });
+    </script>
+</body>
+</html>

@@ -9,24 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Re-adding the structural styles you liked */
-        .side-panel {
-            position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
-            background: #121212; z-index: 4000; transition: 0.3s ease;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
-        }
-        .side-panel.active { right: 0; }
-        .close-drawer {
-            position: absolute; top: 20px; left: 20px;
-            font-size: 1.4rem; color: white; cursor: pointer; z-index: 4001;
-        }
-        .profile-card { text-align: center; padding: 50px 10px 20px; }
-        .profile-img {
-            width: 85px; height: 85px; border-radius: 50%;
-            object-fit: cover; border: 3px solid #a881ff;
-            margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;
-        }
-
+        /* Drawer-specific styles removed */
+        
         #toast {
             visibility: hidden; min-width: 250px; background-color: #4caf50;
             color: #fff; text-align: center; border-radius: 8px;
@@ -58,6 +42,7 @@
         
         .save-btn { background: #a881ff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; }
         .cancel-btn { background: transparent; color: #888; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 5px; }
+        .logout-confirm-btn { background: #ff5e5e; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; }
         .header-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
         .input-label { font-size: 0.75rem; color: #a881ff; margin-bottom: 4px; display: block; font-weight: 600; }
     </style>
@@ -90,14 +75,22 @@
         </div>
     </div>
 
+    <div id="logoutModal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <i class="fa-solid fa-right-from-bracket" style="font-size: 2rem; color: #ff5e5e; margin-bottom: 15px;"></i>
+            <h3>Logout?</h3>
+            <p style="color: #888; margin-bottom: 20px;">Are you sure you want to log out of your account?</p>
+            <button class="logout-confirm-btn" id="confirmLogout">Yes, Logout</button>
+            <button class="cancel-btn" onclick="closeAllModals()">Cancel</button>
+        </div>
+    </div>
+
     <header class="top-nav">
         <div class="nav-left">
             <a href="home.html" style="color:white;"><i class="fa-solid fa-arrow-left"></i></a>
             <h2 style="margin-left: 15px;">Settings</h2>
         </div>
-        <div class="nav-right">
-            <div id="menuToggle" style="cursor: pointer;"><i class="fa-solid fa-bars"></i></div>
-        </div>
+        <div class="nav-right"></div>
     </header>
 
     <div class="app-layout">
@@ -115,6 +108,10 @@
                 <div class="settings-item" onclick="goToMyProfile()">
                     <span>View profile</span>
                     <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="settings-item" onclick="window.location.href='notice.html'">
+                    <span>Notifications</span>
+                    <i class="fa-solid fa-bell"></i>
                 </div>
                 <div class="settings-item">
                     <span>Account Security</span>
@@ -138,23 +135,6 @@
                 </div>
             </div>
         </main>
-
-        <aside class="side-panel" id="sidePanel">
-            <i class="fa-solid fa-xmark close-drawer" id="closeDrawer"></i>
-            <div class="cover-photo"></div>
-            <div class="profile-card">
-                <img id="sideAvatar" class="profile-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
-                <h3 id="sideName">Username</h3>
-                <p id="sideEmail">email@email.com</p>
-            </div>
-            <nav class="menu">
-                <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="cpost.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>
-                <a href="notice.html"><i class="fa-solid fa-bell"></i> Notifications</a>
-                <a href="setting.html" class="active-link"><i class="fa-solid fa-gear"></i> Settings</a>
-                <a href="#" id="sideLogout" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-            </nav>
-        </aside>
     </div>
 
     <script>
@@ -171,8 +151,7 @@
             if (!user) return window.location.href = "sign.html";
             currentUser = user;
 
-            // Fetch live data from profiles table
-            const { data: profile, error } = await supa.from('profiles').select('*').eq('id', user.id).single();
+            const { data: profile } = await supa.from('profiles').select('*').eq('id', user.id).single();
             currentProfileData = profile || {};
 
             const name = currentProfileData.full_name || user.user_metadata?.full_name || "Student";
@@ -183,17 +162,10 @@
             document.getElementById("displayAvatar").src = avatar;
             document.getElementById("displayMatric").innerText = matric;
             
-            document.getElementById("sideName").innerText = name;
-            document.getElementById("sideEmail").innerText = user.email;
-            document.getElementById("sideAvatar").src = avatar;
-            
-            // Set Modal Values
             document.getElementById("newName").value = name;
             document.getElementById("newBio").value = currentProfileData.bio || "";
             document.getElementById("newMatric").value = currentProfileData.matric_no || "";
             document.getElementById("newYear").value = currentProfileData.admission_year || "";
-            
-            setupDrawer();
         }
 
         async function handleSave() {
@@ -217,7 +189,6 @@
                     avatarUrl = supa.storage.from('post_images').getPublicUrl(`avatars/${fileName}`).data.publicUrl;
                 }
 
-                // Update Profile Table based on your SQL schema
                 const { error: dbError } = await supa.from('profiles').update({ 
                     full_name: name, 
                     avatar_url: avatarUrl, 
@@ -228,7 +199,6 @@
 
                 if (dbError) throw dbError;
 
-                // Sync Auth metadata for other pages
                 await supa.auth.updateUser({ 
                     data: { full_name: name, avatar_url: avatarUrl } 
                 });
@@ -256,23 +226,24 @@
             setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
         }
 
-        function closeAllModals() { document.getElementById("editModal").classList.remove("show"); }
-        document.getElementById("openEdit").onclick = () => document.getElementById("editModal").classList.add("show");
-        document.getElementById("saveProfileBtn").onclick = handleSave;
-
-        function setupDrawer() {
-            const menuToggle = document.getElementById("menuToggle");
-            const panel = document.getElementById("sidePanel");
-            const closeDrawer = document.getElementById("closeDrawer");
-
-            menuToggle.onclick = e => { e.stopPropagation(); panel.classList.add("active"); };
-            closeDrawer.onclick = () => panel.classList.remove("active");
-            document.onclick = e => { if (!panel.contains(e.target) && !menuToggle.contains(e.target)) panel.classList.remove("active"); };
+        function closeAllModals() { 
+            document.getElementById("editModal").classList.remove("show"); 
+            document.getElementById("logoutModal").classList.remove("show"); 
         }
 
-        const logout = async () => { await supa.auth.signOut(); window.location.href = "sign.html"; };
-        document.getElementById("logoutTrigger").onclick = logout;
-        document.getElementById("sideLogout").onclick = logout;
+        // Open Edit Profile
+        document.getElementById("openEdit").onclick = () => document.getElementById("editModal").classList.add("show");
+        
+        // Open Logout Modal
+        document.getElementById("logoutTrigger").onclick = () => document.getElementById("logoutModal").classList.add("show");
+
+        document.getElementById("saveProfileBtn").onclick = handleSave;
+
+        // Confirm Logout Logic
+        document.getElementById("confirmLogout").onclick = async () => { 
+            await supa.auth.signOut(); 
+            window.location.href = "sign.html"; 
+        };
 
         window.onload = init;
     </script>
