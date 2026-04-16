@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - Student Connect</title>
+    <link rel="stylesheet" href="css/search.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <header class="search-header">
+        <div class="search-bar-row">
+            <a href="home.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i></a>
+            <div class="input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" placeholder="Let's find" id="searchInput" autocomplete="off">
+            </div>
+            <button class="filter-toggle" id="filterBtn"><i class="fa-solid fa-sliders"></i></button>
+        </div>
+        <div class="filter-row" id="filterRow">
+            <div class="chip active" data-type="posts">Post</div>
+            <div class="chip" data-type="people">People</div>
+            <div class="chip" data-type="matric">Matric</div>
+        </div>
+    </header>
+
+    <main id="resultsArea">
+        <div class="empty-state">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <p>Search for posts, friends, or matric numbers</p>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
+        const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const filterBtn = document.getElementById('filterBtn');
+        const filterRow = document.getElementById('filterRow');
+        const chips = document.querySelectorAll('.chip');
+        const searchInput = document.getElementById('searchInput');
+        const resultsArea = document.getElementById('resultsArea');
+
+        let searchTimeout;
+        let currentFilter = 'posts';
+
+        filterBtn.onclick = () => {
+            filterRow.classList.toggle('visible');
+            filterBtn.classList.toggle('active');
+        };
+
+        chips.forEach(chip => {
+            chip.onclick = () => {
+                document.querySelector('.chip.active').classList.remove('active');
+                chip.classList.add('active');
+                currentFilter = chip.getAttribute('data-type');
+                performSearch();
+            };
+        });
+
+        searchInput.oninput = () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 400);
+        };
+
+        async function performSearch() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                resultsArea.innerHTML = `<div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i><p>Search for posts, friends, or matric numbers</p></div>`;
+                return;
+            }
+
+            resultsArea.innerHTML = `<div class="empty-state"><p><i class="fas fa-spinner fa-spin"></i> Searching...</p></div>`;
+
+            try {
+                if (currentFilter === 'posts') {
+                    // Fetch matching posts
+                    const { data: posts, error } = await supa.from('posts')
+                        .select(`*, profiles:uid(full_name, avatar_url)`)
+                        .ilike('text', `%${query}%`)
+                        .order('created_at', { ascending: false })
+                        .limit(15);
+
+                    if (error) throw error;
+
+                    // Fetch exact interaction counts for each post
+                    const postsWithCounts = await Promise.all(
+                        posts.map(async (post) => {
+                            const [likes, dislikes, comments] = await Promise.all([
+                                supa.from("likes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
+                                supa.from("dislikes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
+                                supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", post.id)
+                            ]);
+
+                            return {
+                                ...post,
+                                lCount: likes.count || 0,
+                                dCount: dislikes.count || 0,
+                                cCount: comments.count || 0
+                            };
+                        })
+                    );
+                    renderPosts(postsWithCounts);
+
+                } else if (currentFilter === 'people') {
+                    const { data } = await supa.from('profiles')
+                        .select('*').ilike('full_name', `%${query}%`).limit(15);
+                    renderUsers(data, false);
+                } else if (currentFilter === 'matric') {
+                    const { data } = await supa.from('profiles')
+                        .select('*').ilike('matric_no', `%${query}%`).limit(15);
+                    renderUsers(data, true);
+                }
+            } catch (err) {
+                console.error("Search error:", err);
+                resultsArea.innerHTML = `<p style="color:red; text-align:center; padding:20px;">Error loading results. Check your connection.</p>`;
+            }
+        }
+
+        function renderPosts(posts) {
+            if (!posts?.length) {
+                resultsArea.innerHTML = `<div class="empty-state"><p>No posts found for "${searchInput.value}"</p></div>`;
+                return;
+            }
+            
+            resultsArea.innerHTML = posts.map(p => {
+                const imgs = [p.img1, p.img2, p.img3, p.img4].filter(Boolean);
+                const gridClass = imgs.length > 0 ? `search-grid grid-${imgs.length}` : '';
+                
+                return `
+                    <div class="search-item-post" onclick="openPost('${p.id}')">
+                        <div class="post-header">
+                            <img src="${p.profiles?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                            <div class="post-user-info">
+                                <span class="post-author-name">${p.profiles?.full_name || 'Anonymous Student'}</span>
+                                <span class="post-date">${new Date(p.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <div class="post-text">${p.text || ''}</div>
+                        ${imgs.length > 0 ? `<div class="${gridClass}">${imgs.map(src => `<img src="${src}" loading="lazy">`).join('')}</div>` : ''}
+                        
+                        <div class="post-actions">
+                            <div class="action-item"><i class="fa-regular fa-thumbs-up"></i> <span>${p.lCount}</span></div>
+                            <div class="action-item"><i class="fa-regular fa-thumbs-down"></i> <span>${p.dCount}</span></div>
+                            <div class="action-item"><i class="fa-regular fa-comment"></i> <span>${p.cCount}</span></div>
+                            <div class="action-item"><i class="fa-regular fa-eye"></i> <span>${p.view || 0}</span></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderUsers(users, showMatric) {
+            if (!users?.length) {
+                resultsArea.innerHTML = `<div class="empty-state"><p>No students found matching your search.</p></div>`;
+                return;
+            }
+            
+            resultsArea.innerHTML = users.map(u => `
+                <div class="search-item-user" onclick="window.location.href='profile.html?uid=${u.id}'">
+                    <img src="${u.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                    <div class="user-info">
+                        <h4>${u.full_name}</h4>
+                        ${showMatric ? `<p><i class="fa-solid fa-id-card"></i> ${u.matric_no || 'No Matric No.'}</p>` : `<p>${u.bio || 'Connect Student'}</p>`}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openPost(id) {
+            localStorage.setItem("selectedPost", JSON.stringify({ id }));
+            window.location.href = "post.html";
+        }
+    </script>
+</body>
+</html>

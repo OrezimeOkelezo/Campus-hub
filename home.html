@@ -1,200 +1,236 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home - Student Connect</title>
-    <link rel="stylesheet" href="css/home.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body>
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Home - Student Connect</title>  
+    <link rel="stylesheet" href="css/home.css">  
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">  
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  
+</head>  
+  
+<body>  
+  
+<header class="top-nav">  
+    <div class="header-inner">  
+        <div class="nav-left"><h2 id="displayGreeting">Hi,</h2></div>  
+        <div class="nav-right">  
+            <a href="search.html" class="icon-btn"><i class="fa-solid fa-magnifying-glass"></i></a>  
+            <div class="icon-btn" id="menuToggle"><i class="fa-solid fa-bars"></i></div>  
+        </div>  
+    </div>  
+</header>  
+  
+<div class="app-layout">  
+    <main class="feed-container" id="feedContainer">  
+        <div class="feed-status">Loading community...</div>  
+    </main>  
+  
+    <aside class="side-panel" id="sidePanel">  
+        <div class="cover-photo"></div>  
+        <div class="profile-card">  
+            <img id="sideAvatar" class="profile-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">  
+            <h3 id="sideName">Username</h3>  
+            <p id="sideEmail">email@email.com</p>  
+        </div>  
+        <nav class="menu">  
+            <a href="home.html" class="active-link"><i class="fa-solid fa-house"></i> Home</a>  
+            <a href="file.html"><i class="fa-solid fa-folder-open"></i> Files</a>  
+            <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>  
+            <a href="#"><i class="fa-solid fa-message"></i> Messages</a>  
+            <a href="#" id="logoutTrigger" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>  
+        </nav>  
+    </aside>  
+</div>  
+  
+<div id="logoutModal" class="modal-overlay">  
+    <div class="modal-content">  
+        <h3>Logout?</h3>  
+        <p>Are you sure you want to leave?</p>  
+        <div class="modal-actions">  
+            <button id="cancelLogout">Cancel</button>  
+            <button id="confirmLogout">Logout</button>  
+        </div>  
+    </div>  
+</div>  
+  
+<a href="cpost.html" class="mobile-fab"><i class="fa-solid fa-plus"></i></a>  
+  
+<script>
+const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    <header class="top-nav">
-        <div class="header-inner">
-            <div class="nav-left">
-                <h2 id="userGreeting">Hi, Student</h2>
-            </div>
-            <div class="nav-right">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <i class="fa-solid fa-bars" id="menuToggle"></i>
-            </div>
-        </div>
-    </header>
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-    <div class="app-layout">
-        <main class="feed-container" id="postsFeed">
-            <div class="loading-spinner" style="text-align: center; padding: 40px; color: #888;">
-                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                <p>Fetching latest posts...</p>
-            </div>
-        </main>
+// =======================
+// INIT
+// =======================
+async function init() {
+    try {
+        const { data: { user } } = await supa.auth.getUser();
 
-        <aside class="side-panel" id="sidePanel">
-            <div class="cover-photo"></div>
-            <div class="profile-card">
-                <img src="" alt="Me" class="profile-img" id="drawerAvatar">
-                <h3 id="drawerName">Loading...</h3>
-                <p class="email" id="drawerEmail">...</p>
-            </div>
-            <nav class="menu">
-                <a href="home.html" class="active-link"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="profile.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>
-                <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>
-                <a href="#"><i class="fa-solid fa-message"></i> Messages</a>
-                <a href="#" id="logoutBtn" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-            </nav>
-        </aside>
-    </div>
-
-    <a href="cpost.html" class="fab-main">
-        <i class="fa-solid fa-plus"></i>
-    </a>
-
-    <div id="logoutModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
-            <h3>Sign Out?</h3>
-            <p>You'll need to login again to access your student feed.</p>
-            <div class="modal-actions">
-                <button id="cancelLogout" class="btn-secondary">Stay</button>
-                <button id="confirmLogout" class="btn-danger">Logout</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // 1. INITIALIZE SUPABASE
-        const _supabase = supabase.createClient(
-            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
-            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
-        );
-
-        const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-        // 2. FETCH USER DATA & UPDATE UI
-        async function loadUserData() {
-            const { data: { user }, error } = await _supabase.auth.getUser();
-
-            if (error || !user) {
-                window.location.href = "sign.html"; 
-                return;
-            }
-
-            const metadata = user.user_metadata;
-            const firstName = metadata.full_name ? metadata.full_name.split(' ')[0] : "Student";
-
-            // Update UI Elements
-            document.getElementById('userGreeting').innerText = `Hi, ${firstName}`;
-            document.getElementById('drawerName').innerText = metadata.full_name || "User";
-            document.getElementById('drawerEmail').innerText = user.email;
-            
-            const avatarImg = document.getElementById('drawerAvatar');
-            avatarImg.src = metadata.avatar ? metadata.avatar : DEFAULT_AVATAR;
-        }
-
-        // 3. FETCH POSTS FROM DATABASE
-        async function loadPosts() {
-            const feed = document.getElementById('postsFeed');
-            
-            const { data: posts, error } = await _supabase
-                .from('posts') 
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                feed.innerHTML = `<p style="padding:20px; color:#ff5e5e;">Error loading feed: ${error.message}</p>`;
-                return;
-            }
-             
-
-            feed.innerHTML = ''; 
-
-            if (posts.length === 0) {
-                feed.innerHTML = `<p style="padding:40px; text-align:center; color:#555;">No posts yet. Be the first to share something!</p>`;
-                return;
-            }
-
-            posts.forEach(post => {
-                const postHTML = `
-                    <div class="post">
-                        <div class="post-sidebar">
-                            <img src="${post.author_avatar || DEFAULT_AVATAR}" alt="User" class="avatar">
-                        </div>
-                        <div class="post-main">
-                            <a href="post.html?id=${post.id}" class="post-link">
-                                <div class="post-info">
-                                    <span class="user-name">${post.author_name}</span>
-                                    <span class="user-handle">@${post.author_handle || 'student'} • ${new Date(post.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <div class="view-stats">
-                                    <i class="fa-regular fa-eye"></i> ${post.views || 0} views
-                                </div>
-                                <p class="post-text">${post.content}</p>
-                                ${post.image_url ? `<img src="${post.image_url}" class="content-img">` : ''}
-                            </a>
-                            <div class="post-actions-static">
-                                <span class="stat-item"><i class="fa-regular fa-thumbs-up"></i> ${post.likes || 0}</span>
-                                <span class="stat-item"><i class="fa-regular fa-thumbs-down"></i></span>
-                                <span class="stat-item"><i class="fa-regular fa-comment"></i> ${post.comments_count || 0}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                feed.innerHTML += postHTML;
-            });
-        }
-
-        // 4. LOGOUT & MODAL LOGIC
-        const logoutBtn = document.getElementById('logoutBtn');
-        const logoutModal = document.getElementById('logoutModal');
-        const confirmLogout = document.getElementById('confirmLogout');
-        const cancelLogout = document.getElementById('cancelLogout');
-
-        logoutBtn.onclick = (e) => {
-            e.preventDefault();
-            logoutModal.classList.add('show');
-            sidePanel.classList.remove('active'); // Close mobile menu
-        };
-
-        cancelLogout.onclick = () => {
-            logoutModal.classList.remove('show');
-        };
-
-        confirmLogout.onclick = async () => {
-            confirmLogout.innerText = "Signing out...";
-            await _supabase.auth.signOut();
+        if (!user) {
             window.location.href = "sign.html";
+            return;
+        }
+
+        // Setup Sidebar & Greeting
+        const meta = user.user_metadata || {};
+        const name = meta.full_name || "Student";
+
+        document.getElementById("displayGreeting").innerText = `Hi, ${name.split(" ")[0]}`;
+        document.getElementById("sideName").innerText = name;
+        document.getElementById("sideEmail").innerText = user.email;
+        document.getElementById("sideAvatar").src = meta.avatar_url || DEFAULT_AVATAR;
+
+        loadPosts();
+
+    } catch (err) {
+        console.error("Init error:", err);
+    }
+}
+
+// =======================
+// LOAD POSTS (Using Joins)
+// =======================
+async function loadPosts() {
+    const container = document.getElementById("feedContainer");
+
+    // Load Cache
+    const cached = sessionStorage.getItem("cached_feed");
+    if (cached) renderPosts(JSON.parse(cached));
+
+    // Fetch posts with profile data via Foreign Key (uid)
+    const { data: posts, error } = await supa
+        .from("posts")
+        .select(`
+            *,
+            profiles:uid (
+                full_name,
+                avatar_url
+            )
+        `)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Fetch error:", error);
+        if (!cached) container.innerHTML = `<div class="feed-status">Failed to load posts</div>`;
+        return;
+    }
+
+    // Attach Interaction Counts
+    const finalPosts = await Promise.all(
+        posts.map(async (post) => {
+            const profile = post.profiles;
+            
+            // Logic: Use profile data, fallback to defaults if null
+            const name = profile?.full_name || "Anonymous";
+            const avatar = profile?.avatar_url || DEFAULT_AVATAR;
+
+            const [likes, dislikes, comments] = await Promise.all([
+                supa.from("likes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
+                supa.from("dislikes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
+                supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", post.id)
+            ]);
+
+            return {
+                ...post,
+                name,
+                avatar,
+                lCount: likes.count || 0,
+                dCount: dislikes.count || 0,
+                cCount: comments.count || 0
+            };
+        })
+    );
+
+    const freshString = JSON.stringify(finalPosts);
+    if (cached !== freshString) {
+        sessionStorage.setItem("cached_feed", freshString);
+        renderPosts(finalPosts);
+    }
+}
+
+// =======================
+// RENDER
+// =======================
+function renderPosts(posts) {
+    const container = document.getElementById("feedContainer");
+    if (!posts || posts.length === 0) {
+        container.innerHTML = `<div class="feed-status">No posts available</div>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    posts.forEach(post => {
+        const images = [post.img1, post.img2, post.img3, post.img4].filter(Boolean);
+        const gridClass = images.length > 1 ? `grid-${images.length}` : "";
+
+        const div = document.createElement("div");
+        div.className = "post";
+        div.onclick = () => {
+            localStorage.setItem("selectedPost", JSON.stringify(post));
+            window.location.href = "post.html";
         };
 
-        // Close modal if user clicks outside the white box
-        window.onclick = (e) => {
-            if (e.target == logoutModal) {
-                logoutModal.classList.remove('show');
-            }
-        };
+        div.innerHTML = `
+            <img src="${post.avatar}" class="avatar" onerror="this.src='${DEFAULT_AVATAR}'">
+            <div class="post-body">
+                <div class="post-header">
+                    <span class="name">${post.name}</span>
+                    <span class="meta">@ • ${timeAgo(post.created_at)}</span>
+                </div>
+                <div class="views"><i class="fa-regular fa-eye"></i> ${post.view || 0} views</div>
+                <p>${post.text || ""}</p>
+                ${images.length ? `
+                    <div class="media-grid ${gridClass}">
+                        ${images.map(img => `<img src="${img}" loading="lazy">`).join("")}
+                    </div>
+                ` : ""}
+                <div class="actions">
+                    <span><i class="fa-regular fa-thumbs-up"></i> ${post.lCount}</span>
+                    <span><i class="fa-regular fa-thumbs-down"></i> ${post.dCount}</span>
+                    <span><i class="fa-regular fa-comment"></i> ${post.cCount}</span>
+                </div>
+            </div>
+        `;
+        fragment.appendChild(div);
+    });
 
-        // 5. DRAWER TOGGLE LOGIC
-        const menuToggle = document.getElementById('menuToggle');
-        const sidePanel = document.getElementById('sidePanel');
+    container.innerHTML = "";
+    container.appendChild(fragment);
+}
 
-        menuToggle.onclick = (e) => {
-            e.stopPropagation();
-            sidePanel.classList.toggle('active');
-        };
+// =======================
+// HELPERS & UI
+// =======================
+function timeAgo(date) {
+    if (!date) return "Just now";
+    const diff = Math.floor((new Date() - new Date(date)) / 60000);
+    if (diff < 1) return "Just now";
+    if (diff < 60) return diff + "m";
+    if (diff < 1440) return Math.floor(diff / 60) + "h";
+    return Math.floor(diff / 1440) + "d";
+}
 
-        document.addEventListener('click', (e) => {
-            if (!sidePanel.contains(e.target) && !menuToggle.contains(e.target)) {
-                sidePanel.classList.remove('active');
-            }
-        });
+const menuToggle = document.getElementById("menuToggle");
+const panel = document.getElementById("sidePanel");
+const modal = document.getElementById("logoutModal");
 
-           // Initialize Page
-        window.onload = () => {
-            loadUserData();
-            loadPosts();
-        };
-    </script>
-</body>
+menuToggle.onclick = e => { e.stopPropagation(); panel.classList.toggle("active"); };
+document.onclick = e => { if (!panel.contains(e.target) && !menuToggle.contains(e.target)) panel.classList.remove("active"); };
+
+document.getElementById("logoutTrigger").onclick = e => { e.preventDefault(); modal.classList.add("show"); };
+document.getElementById("cancelLogout").onclick = () => modal.classList.remove("show");
+document.getElementById("confirmLogout").onclick = async () => {
+    await supa.auth.signOut();
+    window.location.href = "sign.html";
+};
+
+window.onload = init;
+</script>
+</body>  
 </html>

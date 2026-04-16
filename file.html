@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Files - Student Connect</title>
+    <link rel="stylesheet" href="css/home.css">
+    <link rel="stylesheet" href="css/file.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <div id="toast">Action successful!</div>
+
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <h3>Upload File</h3>
+            <p class="modal-subtitle">PDF, DOCX, or PPTX only</p>
+            
+            <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.pptx,.ppt" style="display: none;">
+            
+            <div class="upload-dropzone" onclick="document.getElementById('fileInput').click()">
+                <i class="fa-solid fa-file-circle-plus"></i>
+                <p id="fileNameDisplay">Tap to select a document</p>
+            </div>
+
+            <button class="primary-action-btn" id="confirmUploadBtn">Upload</button>
+            <button class="secondary-action-btn" onclick="closeUploadModal()">Cancel</button>
+        </div>
+    </div>
+
+    <header class="top-nav">
+        <div class="header-inner">
+            <div class="nav-header-main" id="headerDefault">
+                <a href="home.html" class="back-nav-btn">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <h2 class="page-title">Files</h2>
+            </div>
+
+            <div class="nav-search-mode" id="headerSearch" style="display: none;">
+                <div class="search-input-wrapper">
+                    <input type="text" id="fileSearchInput" placeholder="Search files..." oninput="handleSearch()">
+                    <i class="fa-solid fa-xmark" onclick="toggleSearch(false)"></i>
+                </div>
+            </div>
+
+            <div class="nav-right" id="headerActions">
+                <div class="icon-btn" onclick="toggleSearch(true)"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <div class="icon-btn" onclick="openUploadModal()"><i class="fa-solid fa-plus"></i></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <main class="file-list-container" id="fileContainer">
+            <div class="feed-status">Loading documents...</div>
+        </main>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
+        const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allFiles = [];
+
+        async function fetchFiles() {
+            const { data, error } = await supa.from('files_table').select('*').order('created_at', { ascending: false });
+            if (error) {
+                document.getElementById("fileContainer").innerHTML = `<div class="feed-status">Error loading files</div>`;
+                return;
+            }
+            allFiles = data;
+            renderFiles(allFiles);
+        }
+
+        function renderFiles(files) {
+            const container = document.getElementById("fileContainer");
+            if (files.length === 0) {
+                container.innerHTML = `<div class="feed-status">No files available</div>`;
+                return;
+            }
+
+            container.innerHTML = files.map(file => {
+                const ext = file.name.split('.').pop().toLowerCase();
+                let iconClass = 'fa-file-pdf';
+                let themeColor = '#ff5e5e'; // Default PDF Red
+                
+                if (['doc', 'docx'].includes(ext)) { iconClass = 'fa-file-word'; themeColor = '#448aff'; }
+                if (['ppt', 'pptx'].includes(ext)) { iconClass = 'fa-file-powerpoint'; themeColor = '#ff9800'; }
+
+                return `
+                    <div class="file-card" onclick="window.open('${file.file_url}', '_blank')">
+                        <div class="file-icon-wrapper" style="background: ${themeColor}15; color: ${themeColor}">
+                            <i class="fa-solid ${iconClass}"></i>
+                        </div>
+                        <div class="file-details">
+                            <span class="file-title">${file.name}</span>
+                            <span class="file-date">${new Date(file.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <i class="fa-solid fa-circle-arrow-down download-icon"></i>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- Header UI Logic ---
+        function toggleSearch(active) {
+            document.getElementById('headerDefault').style.display = active ? 'none' : 'flex';
+            document.getElementById('headerActions').style.display = active ? 'none' : 'flex';
+            document.getElementById('headerSearch').style.display = active ? 'flex' : 'none';
+            if(active) {
+                const input = document.getElementById('fileSearchInput');
+                input.focus();
+            } else {
+                document.getElementById('fileSearchInput').value = "";
+                renderFiles(allFiles);
+            }
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('fileSearchInput').value.toLowerCase();
+            const filtered = allFiles.filter(f => f.name.toLowerCase().includes(query));
+            renderFiles(filtered);
+        }
+
+        // --- Upload Logic ---
+        function openUploadModal() { document.getElementById("uploadModal").classList.add("show"); }
+        function closeUploadModal() { document.getElementById("uploadModal").classList.remove("show"); }
+
+        document.getElementById('fileInput').onchange = function() {
+            if(this.files[0]) document.getElementById('fileNameDisplay').innerText = this.files[0].name;
+        };
+
+        document.getElementById('confirmUploadBtn').onclick = async () => {
+            const file = document.getElementById('fileInput').files[0];
+            if(!file) return alert("Select a file first");
+
+            const btn = document.getElementById('confirmUploadBtn');
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            try {
+                const { data: { user } } = await supa.auth.getUser();
+                const path = `user_files/${Date.now()}_${file.name}`;
+                
+                const { error: uploadError } = await supa.storage.from('post_images').upload(path, file);
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supa.storage.from('post_images').getPublicUrl(path);
+
+                await supa.from('files_table').insert([{
+                    name: file.name,
+                    file_url: publicUrl,
+                    owner_id: user.id
+                }]);
+
+                showToast("File uploaded successfully!");
+                closeUploadModal();
+                fetchFiles();
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.innerText = "Upload";
+                btn.disabled = false;
+            }
+        };
+
+        function showToast(msg) {
+            const x = document.getElementById("toast");
+            x.innerText = msg;
+            x.className = "show";
+            setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
+        }
+
+        window.onload = fetchFiles;
+    </script>
+</body>
+</html>

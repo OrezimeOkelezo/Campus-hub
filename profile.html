@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Student Connect</title>
+    <link rel="stylesheet" href="css/home.css">
+    <link rel="stylesheet" href="css/profile.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .side-panel {
+            position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
+            background: #121212; z-index: 4000; transition: 0.3s ease;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+        }
+        .side-panel.active { right: 0; }
+        .close-drawer {
+            position: absolute; top: 20px; left: 20px;
+            font-size: 1.5rem; color: white; cursor: pointer; z-index: 4001;
+        }
+        .profile-card { text-align: center; padding: 50px 10px 20px; }
+        .profile-img-side {
+            width: 85px; height: 85px; border-radius: 50%;
+            object-fit: cover; border: 3px solid #a881ff;
+            margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;
+        }
+        /* FAB Styling */
+        .mobile-fab {
+            position: fixed; bottom: 25px; right: 25px;
+            width: 55px; height: 55px; background: #a881ff;
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; color: white; font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(168, 129, 255, 0.4);
+            text-decoration: none; z-index: 999; display: none; /* Hidden by default */
+        }
+        /* Visibility Classes */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header class="top-nav">
+        <div class="header-inner">
+            <div class="nav-left">
+                <a href="home.html" class="back-link">
+                    <i class="fa-solid fa-arrow-left"></i> 
+                    <span class="header-title">Profile</span>
+                </a>
+            </div>
+            
+            <div class="nav-right">
+                <div class="more-container hidden" id="moreContainer">
+                    <i class="fa-solid fa-ellipsis-vertical" id="moreBtn" style="cursor:pointer; padding: 5px;"></i>
+                    <div class="dropdown-menu" id="profileDropdown">
+                        <a href="#"><i class="fa-solid fa-user-slash"></i> Block</a>
+                        <a href="#" id="reportTrigger"><i class="fa-solid fa-flag"></i> Report</a>
+                    </div>
+                </div>
+                <div class="icon-btn" id="menuToggle" style="cursor: pointer; margin-left: 15px;">
+                    <i class="fa-solid fa-bars"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <main class="feed-container">
+            <section class="profile-hero">
+                <div class="hero-content">
+                    <div class="user-avatar">
+                        <img id="mainAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                    </div>
+                    <h2 class="user-name-title" id="mainName">Loading...</h2>
+                    <p class="user-tagline" id="mainBio">...</p>
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stat-item"><strong id="statLikes">0</strong><span>Likes</span></div>
+                    <div class="stat-item"><strong id="statPosts">0</strong><span>Posts</span></div>
+                    <div class="stat-item"><strong id="statDislikes">0</strong><span>Dislike</span></div>
+                    <div class="stat-item"><strong>0</strong><span>Followers</span></div>
+                    <div class="stat-item"><strong>0</strong><span>Points</span></div>
+                    <div class="stat-item"><strong>0</strong><span>Following</span></div>
+                </div>
+            </section>
+
+            <h3 class="section-label">Posts</h3>
+            <div id="userPostsContainer"></div>
+        </main>
+
+        <aside class="side-panel" id="sidePanel">
+            <i class="fa-solid fa-xmark close-drawer" id="closeDrawer"></i>
+            <div class="cover-photo"></div>
+            <div class="profile-card">
+                <img id="sideAvatar" class="profile-img-side" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                <h3 id="sideName">Username</h3>
+                <p id="sideEmail">email@email.com</p>
+            </div>
+            <nav class="menu">
+                <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>
+                <a href="cpost.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>
+                <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>
+                <a href="#" id="logoutTrigger" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </nav>
+        </aside>
+    </div>
+
+    <a href="#" class="mobile-fab" id="followFab">
+        <i class="fa-solid fa-user-plus"></i>
+    </a>
+
+    <script>
+        const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
+        const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+        async function init() {
+            const { data: { user: currentUser } } = await supa.auth.getUser();
+            if (!currentUser) return window.location.href = "sign.html";
+
+            // Get UID from URL (profile.html?uid=...) or fallback to Current User
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetUid = urlParams.get('uid') || currentUser.id;
+
+            const isOwnProfile = (targetUid === currentUser.id);
+
+            // Fetch Target User Profile
+            const { data: profile } = await supa.from('profiles').select('*').eq('id', targetUid).single();
+            const name = profile?.full_name || "Student";
+            const avatar = profile?.avatar_url || DEFAULT_AVATAR;
+
+            // UI Update
+            document.getElementById("mainName").innerText = name;
+            document.getElementById("mainAvatar").src = avatar;
+            document.getElementById("mainBio").innerText = profile?.bio || "Student Connect Member";
+            
+            // Sidebar updates (Always show Current User's info in sidebar)
+            const { data: myProfile } = await supa.from('profiles').select('*').eq('id', currentUser.id).single();
+            document.getElementById("sideName").innerText = myProfile?.full_name || "Me";
+            document.getElementById("sideAvatar").src = myProfile?.avatar_url || DEFAULT_AVATAR;
+            document.getElementById("sideEmail").innerText = currentUser.email;
+
+            // Logic for More Button and FAB
+            if (!isOwnProfile) {
+                document.getElementById("moreContainer").classList.remove("hidden");
+                document.getElementById("followFab").style.display = "flex";
+            }
+
+            loadUserPosts(targetUid, name, avatar);
+        }
+
+        async function loadUserPosts(uid, name, avatar) {
+            const container = document.getElementById("userPostsContainer");
+            const { data: posts } = await supa.from('posts').select('*').eq('uid', uid).order('created_at', { ascending: false });
+            
+            if (!posts || posts.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:40px; color:#666;">No posts yet.</div>`;
+                return;
+            }
+
+            document.getElementById("statPosts").innerText = posts.length;
+            let likesSum = 0, dislikesSum = 0;
+
+            const postsWithData = await Promise.all(posts.map(async (p) => {
+                const [l, d, c] = await Promise.all([
+                    supa.from('likes').select('*', { count: 'exact', head: true }).eq('key', p.id).eq('value', true),
+                    supa.from('dislikes').select('*', { count: 'exact', head: true }).eq('key', p.id).eq('value', true),
+                    supa.from('comments').select('*', { count: 'exact', head: true }).eq('post_key', p.id)
+                ]);
+                likesSum += (l.count || 0);
+                dislikesSum += (d.count || 0);
+                return { ...p, name, avatar, lCount: l.count || 0, dCount: d.count || 0, cCount: c.count || 0 };
+            }));
+
+            document.getElementById("statLikes").innerText = likesSum;
+            document.getElementById("statDislikes").innerText = dislikesSum;
+
+            container.innerHTML = "";
+            postsWithData.forEach(post => {
+                const imgs = [post.img1, post.img2, post.img3, post.img4].filter(Boolean);
+                const gridClass = imgs.length > 1 ? `grid-${imgs.length}` : "";
+
+                const div = document.createElement("div");
+                div.className = "post";
+                div.onclick = () => {
+                    localStorage.setItem("selectedPost", JSON.stringify(post));
+                    window.location.href = "post.html";
+                };
+
+                div.innerHTML = `
+                    <div class="post-sidebar"><img src="${avatar}" class="avatar"></div>
+                    <div class="post-main">
+                        <div class="post-info"><span class="user-name">${name}</span></div>
+                        <p class="post-text">${post.text || ""}</p>
+                        ${imgs.length ? `<div class="media-grid ${gridClass}">${imgs.map(s => `<img src="${s}">`).join('')}</div>` : ""}
+                        <div class="post-actions-horizontal">
+                            <span class="action-item"><i class="fa-regular fa-thumbs-up"></i> ${post.lCount}</span>
+                            <span class="action-item"><i class="fa-regular fa-thumbs-down"></i> ${post.dCount}</span>
+                            <span class="action-item"><i class="fa-regular fa-comment"></i> ${post.cCount}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // --- Basic UI Controls ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidePanel = document.getElementById('sidePanel');
+        const closeDrawer = document.getElementById('closeDrawer');
+        const moreBtn = document.getElementById('moreBtn');
+        const dropdown = document.getElementById('profileDropdown');
+
+        menuToggle.onclick = e => { e.stopPropagation(); sidePanel.classList.add('active'); };
+        closeDrawer.onclick = () => sidePanel.classList.remove('active');
+        moreBtn.onclick = e => { e.stopPropagation(); dropdown.classList.toggle('active'); };
+
+        document.onclick = e => {
+            if (!sidePanel.contains(e.target) && e.target !== menuToggle) sidePanel.classList.remove('active');
+            if (!moreBtn.contains(e.target)) dropdown.classList.remove('active');
+        };
+
+        document.getElementById("logoutTrigger").onclick = async () => {
+            await supa.auth.signOut();
+            window.location.href = "sign.html";
+        };
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -8,6 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Essential dynamic styles if not in your CSS */
+        #postSubmitBtn.active { background-color: #a881ff !important; color: white !important; opacity: 1 !important; cursor: pointer; }
+        .image-preview-wrapper { position: relative; display: inline-block; width: 80px; height: 80px; margin: 5px; }
+        .preview-img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        .remove-img-btn { position: absolute; top: -5px; right: -5px; background: red; color: white; border: none; border-radius: 50%; cursor: pointer; width: 20px; height: 20px; font-size: 12px; }
+    </style>
 </head>
 <body>
 
@@ -35,144 +42,155 @@
 
         <div class="media-section">
             <h4 class="media-title">Add images <span id="imgCount">(0/4)</span></h4>
-            
             <div class="image-grid" id="imageGrid">
                 <label for="imageUpload" class="add-image-btn" id="addImageLabel">
                     <i class="fa-solid fa-plus"></i>
                     <span>Select image</span>
                 </label>
             </div>
-            
             <input type="file" id="imageUpload" accept="image/*" multiple hidden>
         </div>
     </main>
 
     <script>
-        // 1. INITIALIZE SUPABASE
-        const _supabase = supabase.createClient(
-            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
-            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
-        );
+        const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const postContent = document.getElementById('postContent');
         const postSubmitBtn = document.getElementById('postSubmitBtn');
         const imageUpload = document.getElementById('imageUpload');
         const imageGrid = document.getElementById('imageGrid');
-        const imgCount = document.getElementById('imgCount');
         
-        let selectedFiles = []; 
-        let previewUrls = [];   
+        let selectedFiles = [];
         let currentUser = null;
 
-        // 2. LOAD USER
         async function init() {
             const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) { window.location.href = "sign.html"; return; }
+            if (!user) {
+                window.location.href = "sign.html";
+                return;
+            }
             currentUser = user;
-            
-            document.getElementById('currentUserName').innerText = user.user_metadata.full_name;
-            document.getElementById('currentUserAvatar').src = user.user_metadata.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+            // Use the same metadata keys used in your settings.html
+            const name = user.user_metadata.full_name || "Student";
+            const avatar = user.user_metadata.avatar_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+            document.getElementById('currentUserName').innerText = name;
+            document.getElementById('currentUserAvatar').src = avatar;
         }
         init();
 
-        // 3. IMAGE LOGIC
-        imageUpload.addEventListener('change', function(e) {
-            const files = Array.from(e.target.files);
-            const availableSlots = 4 - selectedFiles.length;
+        function updateUI() {
+            const hasText = postContent.value.trim().length >= 2;
+            const hasImages = selectedFiles.length > 0;
+            const canSubmit = hasText || hasImages;
             
-            files.slice(0, availableSlots).forEach(file => {
+            postSubmitBtn.disabled = !canSubmit;
+            if (canSubmit) {
+                postSubmitBtn.classList.add('active');
+            } else {
+                postSubmitBtn.classList.remove('active');
+            }
+            
+            document.getElementById('imgCount').innerText = `(${selectedFiles.length}/4)`;
+        }
+
+        imageUpload.onchange = (e) => {
+            const files = Array.from(e.target.files);
+            const remainingSpace = 4 - selectedFiles.length;
+            
+            files.slice(0, remainingSpace).forEach(file => {
                 selectedFiles.push(file);
-                previewUrls.push(URL.createObjectURL(file));
             });
+            
             renderImages();
-        });
+            e.target.value = ""; // Reset input so same file can be picked again if removed
+        };
 
         function renderImages() {
-            imageGrid.innerHTML = ''; 
-            previewUrls.forEach((src, index) => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'image-preview-wrapper';
-                wrapper.innerHTML = `
-                    <img src="${src}" class="preview-img">
-                    <button class="remove-img-btn" type="button" onclick="removeImage(${index})">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+            // Clear but keep the hidden input label elsewhere or re-append it
+            imageGrid.innerHTML = '';
+            
+            selectedFiles.forEach((file, i) => {
+                const url = URL.createObjectURL(file);
+                const div = document.createElement('div');
+                div.className = 'image-preview-wrapper';
+                div.innerHTML = `
+                    <img src="${url}" class="preview-img">
+                    <button class="remove-img-btn" onclick="removeImage(${i})"><i class="fa-solid fa-xmark"></i></button>
                 `;
-                imageGrid.appendChild(wrapper);
+                imageGrid.appendChild(div);
             });
 
-            if (previewUrls.length < 4) {
+            if (selectedFiles.length < 4) {
                 const addBtn = document.createElement('label');
                 addBtn.className = 'add-image-btn';
                 addBtn.setAttribute('for', 'imageUpload');
                 addBtn.innerHTML = `<i class="fa-solid fa-plus"></i><span>Select image</span>`;
                 imageGrid.appendChild(addBtn);
             }
-            imgCount.innerText = `(${previewUrls.length}/4)`;
-            checkPostValidity();
+            updateUI();
         }
 
-        window.removeImage = function(index) {
-            selectedFiles.splice(index, 1);
-            previewUrls.splice(index, 1);
+        window.removeImage = (i) => {
+            selectedFiles.splice(i, 1);
             renderImages();
         };
 
-        // 4. VALIDATION & PURPLE BUTTON TOGGLE
-        function checkPostValidity() {
-            const hasText = postContent.value.trim().length >= 3;
-            const hasImages = selectedFiles.length > 0;
-            const isValid = hasText || hasImages;
+        postContent.oninput = updateUI;
 
-            postSubmitBtn.disabled = !isValid;
-            
-            if (isValid) {
-                postSubmitBtn.classList.add('active'); // CSS will turn this purple
-            } else {
-                postSubmitBtn.classList.remove('active');
-            }
-        }
-        postContent.addEventListener('input', checkPostValidity);
-
-        // 5. POST SUBMIT (RLS FIX)
         postSubmitBtn.onclick = async () => {
             postSubmitBtn.disabled = true;
             postSubmitBtn.innerText = "Posting...";
 
             try {
                 let uploadedUrls = [];
-                for (let file of selectedFiles) {
-                    const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
-                    const { data, error } = await _supabase.storage
-                        .from('post_images')
-                        .upload(`${currentUser.id}/${fileName}`, file);
 
-                    if (error) throw error;
-                    const { data: { publicUrl } } = _supabase.storage.from('post_images').getPublicUrl(data.path);
-                    uploadedUrls.push(publicUrl);
+                // Upload images sequentially
+                for (let file of selectedFiles) {
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                    const filePath = `post_images/${currentUser.id}/${fileName}`;
+
+                    const { error: uploadError } = await _supabase.storage
+                        .from('post_images')
+                        .upload(filePath, file);
+
+                    if (uploadError) throw uploadError;
+
+                    const { data } = _supabase.storage
+                        .from('post_images')
+                        .getPublicUrl(filePath);
+
+                    uploadedUrls.push(data.publicUrl);
                 }
 
-                const { error: dbError } = await _supabase.from('posts').insert([{
-                    uid: currentUser.id, // CRITICAL FOR RLS
-                    author_name: currentUser.user_metadata.full_name,
-                    author_avatar: currentUser.user_metadata.avatar,
-                    text: postContent.value.trim(),
-                    key: Math.floor(Math.random() * 5) + 1,
-                    pic: uploadedUrls[0] || null,
-                    img1: uploadedUrls[0] || null,
-                    img2: uploadedUrls[1] || null,
-                    img3: uploadedUrls[2] || null,
-                    img4: uploadedUrls[3] || null,
-                    "like": 0, dislike: 0, report: 0, comment: 0
-                }]);
+                // Insert post into table
+                const { error: dbError } = await _supabase
+                    .from('posts')
+                    .insert([{
+                        uid: currentUser.id,
+                        text: postContent.value.trim(),
+                        img1: uploadedUrls[0] || null,
+                        img2: uploadedUrls[1] || null,
+                        img3: uploadedUrls[2] || null,
+                        img4: uploadedUrls[3] || null,
+                        view: 0,
+                        created_at: new Date()
+                    }]);
 
                 if (dbError) throw dbError;
+
                 window.location.href = "home.html";
 
             } catch (err) {
-                alert("Upload Failed: " + err.message);
+                console.error(err);
+                alert("Failed to post: " + err.message);
                 postSubmitBtn.disabled = false;
                 postSubmitBtn.innerText = "Post";
+                updateUI();
             }
         };
     </script>
