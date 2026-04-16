@@ -1,0 +1,392 @@
+<!DOCTYPE html>    
+<html lang="en">    
+<head>    
+    <meta charset="UTF-8">    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <title>Post Detail - Student Connect</title>    
+    <link rel="stylesheet" href="css/post.css">    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .post-options { position: relative; display: flex; align-items: center; }
+        .options-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #555; padding: 5px; }
+        .options-menu { 
+            position: absolute; right: 0; top: 35px; background: white; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 8px; 
+            display: none; z-index: 1000; min-width: 120px; overflow: hidden;
+        }
+        .options-menu.show { display: block; }
+        .options-menu button { width: 100%; padding: 12px; border: none; background: none; text-align: left; cursor: pointer; font-size: 0.9rem; }
+        
+        .vote-pills { 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+            padding: 15px 0;
+            border-top: 1px solid #f0f0f0;
+        }
+        .vote-btn, .comment-trigger { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            color: #666;
+            font-size: 1rem;
+            padding: 0;
+        }
+
+        .active-like { color: #3498db !important; }
+        .active-dislike { color: #e74c3c !important; }
+        
+        .comment-time { font-size: 0.7rem; color: #999; margin-left: 5px; }
+        .delete-opt { color: #e74c3c; font-weight: 600; }
+        .view-count-meta { margin-left: 8px; color: #888; font-weight: 400; }
+
+        .avatar-header, .author-name, .comment-user { cursor: pointer; }
+
+        /* Lightbox Modal */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>    
+<body>    
+
+<div id="imageModal" class="image-modal">
+    <span class="close-modal" id="closeModal">&times;</span>
+    <img class="image-modal-content" id="fullImage">
+</div>
+    
+<header class="top-nav">    
+    <div class="header-inner">    
+        <div class="nav-left">    
+            <a href="home.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i></a>    
+            <div class="author-meta-header">    
+                <img id="authorAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="avatar-header">    
+                <div class="author-text">    
+                    <span id="authorName" class="author-name">Loading...</span>    
+                    <span id="postDate" class="post-date"></span>    
+                </div>    
+            </div>    
+        </div>    
+        <div class="nav-right">
+            <div class="post-options">
+                <button class="options-btn" id="postMoreBtn"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                <div class="options-menu" id="postMenu"></div>
+            </div>
+            <i class="fa-solid fa-bars" id="menuToggle"></i>    
+        </div>    
+    </div>    
+</header>    
+    
+<div class="app-layout">    
+    <main class="post-container">    
+        <article class="article-content">    
+            <p id="postText" class="article-subtitle"></p>    
+            <div id="postImages" class="image-grid"></div>    
+    
+            <div class="article-footer">    
+                <div class="vote-pills">    
+                    <button class="vote-btn" id="likeBtn">    
+                        <i class="fa-regular fa-thumbs-up"></i> <span id="likeCount">0</span>    
+                    </button>    
+                    <button class="vote-btn" id="dislikeBtn">    
+                        <i class="fa-regular fa-thumbs-down"></i> <span id="dislikeCount">0</span>    
+                    </button>    
+                    <div class="comment-trigger" id="commentBtn">    
+                        <i class="fa-regular fa-comment"></i> <span id="commentCount">0</span>    
+                    </div>    
+                </div>    
+            </div>    
+    
+            <section class="comments-section">    
+                <h3>Comments</h3>    
+                <div id="commentsFeed"></div>    
+            </section>    
+        </article>    
+    </main>    
+    
+    <aside class="side-panel" id="sidePanel">    
+        <div class="cover-photo"></div>    
+        <div class="profile-card">    
+            <img id="myAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-img">    
+            <h3 id="myName">Student Name</h3>    
+            <p id="myEmail"></p>    
+        </div>    
+        <nav class="menu">    
+            <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>    
+            <a href="cpost.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>    
+            <a href="notice.html"><i class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>    
+            <hr class="nav-divider">    
+            <a href="#" id="logoutBtn" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>    
+        </nav>    
+    </aside>    
+</div>    
+    
+<div class="comment-input-area">    
+    <div class="input-wrapper">    
+        <textarea id="commentInput" placeholder="Write a comment..." rows="1"></textarea>    
+        <button class="send-btn" id="sendComment"><i class="fa-solid fa-paper-plane"></i></button>    
+    </div>    
+</div>    
+    
+<script>    
+const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';    
+const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';    
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);    
+    
+let currentUser;    
+let currentPost;
+let localState = { isLiked: false, isDisliked: false, likes: 0, dislikes: 0 };
+    
+async function init() {    
+    const { data: { user } } = await supa.auth.getUser();    
+    if (!user) return window.location.href = "sign.html";    
+    currentUser = user;    
+    
+    const { data: myProfile } = await supa.from('profiles').select('full_name, avatar_url').eq('id', user.id).single();
+    document.getElementById("myAvatar").src = myProfile?.avatar_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";    
+    document.getElementById("myName").innerText = myProfile?.full_name || "Student";    
+    document.getElementById("myEmail").innerText = user.email;    
+    
+    const saved = localStorage.getItem("selectedPost");    
+    if (!saved) return window.location.href = "home.html";    
+    const tempPost = JSON.parse(saved);
+
+    await supa.rpc('increment_view', { post_id: tempPost.id });
+
+    const { data: freshPost } = await supa
+        .from('posts')
+        .select('*, profiles:uid(full_name, avatar_url)')
+        .eq('id', tempPost.id)
+        .single();
+
+    currentPost = freshPost || tempPost;
+    
+    renderPost();    
+    renderPostActions();
+    await fetchInteractions();    
+    loadComments();    
+    setupListeners();    
+}    
+
+function viewProfile(uid) {
+    if (uid) {
+        localStorage.setItem("targetProfileUid", uid);
+        window.location.href = `profile.html?uid=${uid}`;
+    }
+}
+    
+function renderPost() {    
+    document.getElementById("postText").innerText = currentPost.text;    
+    const profile = currentPost.profiles || {};
+    const authorName = document.getElementById("authorName");
+    const authorAvatar = document.getElementById("authorAvatar");
+
+    authorName.innerText = profile.full_name || currentPost.author_name || "Student";    
+    authorName.onclick = () => viewProfile(currentPost.uid);
+    authorAvatar.src = profile.avatar_url || currentPost.author_avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+    authorAvatar.onclick = () => viewProfile(currentPost.uid);
+    
+    const formattedDate = new Date(currentPost.created_at).toLocaleString([], { month: 'short', day: 'numeric' });
+    document.getElementById("postDate").innerHTML = `${formattedDate} • <span class="view-count-meta"><i class="fa-regular fa-eye"></i> ${currentPost.view || 0}</span>`;    
+    
+    const images = [currentPost.img1, currentPost.img2, currentPost.img3, currentPost.img4].filter(Boolean);    
+    const box = document.getElementById("postImages");    
+    if (images.length > 0) {    
+        box.className = `image-grid grid-${images.length}`;    
+        box.innerHTML = images.map(img => `<img src="${img}" alt="post image" onclick="openImage('${img}')">`).join("");    
+    }    
+}
+
+function openImage(src) {
+    const modal = document.getElementById("imageModal");
+    const modalImg = document.getElementById("fullImage");
+    modal.style.display = "flex";
+    modalImg.src = src;
+}
+
+async function fetchInteractions() {
+    const pKey = parseInt(currentPost.id);    
+    const [likes, dislikes, comments, myL, myD] = await Promise.all([    
+        supa.from("likes").select("*", { count: "exact", head: true }).eq("key", pKey).eq("value", true),    
+        supa.from("dislikes").select("*", { count: "exact", head: true }).eq("key", pKey).eq("value", true),    
+        supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", pKey),    
+        supa.from("likes").select("value").eq("key", pKey).eq("uid", currentUser.id).maybeSingle(),    
+        supa.from("dislikes").select("value").eq("key", pKey).eq("uid", currentUser.id).maybeSingle()    
+    ]);
+    localState.likes = likes.count || 0;
+    localState.dislikes = dislikes.count || 0;
+    localState.isLiked = myL.data?.value === true;
+    localState.isDisliked = myD.data?.value === true;
+    document.getElementById("commentCount").innerText = comments.count || 0;
+    syncUI();
+}
+
+function syncUI() {
+    const lBtn = document.getElementById("likeBtn");
+    const dBtn = document.getElementById("dislikeBtn");
+    document.getElementById("likeCount").innerText = localState.likes;
+    document.getElementById("dislikeCount").innerText = localState.dislikes;
+    lBtn.className = localState.isLiked ? 'vote-btn active-like' : 'vote-btn';
+    lBtn.querySelector('i').className = localState.isLiked ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up';
+    dBtn.className = localState.isDisliked ? 'vote-btn active-dislike' : 'vote-btn';
+    dBtn.querySelector('i').className = localState.isDisliked ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down';
+}
+
+async function sendNotification(type, content = null) {
+    // Only send if I am not the owner of the post
+    if (currentUser.id === currentPost.uid) return;
+    
+    await supa.from('notifications').insert({
+        sender_id: currentUser.id,
+        receiver_id: currentPost.uid,
+        post_id: parseInt(currentPost.id),
+        type: type,
+        content: content
+    });
+}
+
+async function handleLike() {
+    const pKey = parseInt(currentPost.id);
+    if (localState.isLiked) { 
+        localState.isLiked = false; localState.likes--; 
+    } else { 
+        if (localState.isDisliked) { localState.isDisliked = false; localState.dislikes--; } 
+        localState.isLiked = true; localState.likes++; 
+        // Trigger Notification
+        sendNotification('like');
+    }
+    syncUI();
+    await supa.from("likes").upsert({ key: pKey, uid: currentUser.id, value: localState.isLiked }, { onConflict: 'key,uid' });
+    if (localState.isLiked) await supa.from("dislikes").upsert({ key: pKey, uid: currentUser.id, value: false }, { onConflict: 'key,uid' });
+}    
+
+async function handleDislike() {
+    const pKey = parseInt(currentPost.id);
+    if (localState.isDisliked) { 
+        localState.isDisliked = false; localState.dislikes--; 
+    } else { 
+        if (localState.isLiked) { localState.isLiked = false; localState.likes--; } 
+        localState.isDisliked = true; localState.dislikes++; 
+        // Trigger Notification
+        sendNotification('dislike');
+    }
+    syncUI();
+    await supa.from("dislikes").upsert({ key: pKey, uid: currentUser.id, value: localState.isDisliked }, { onConflict: 'key,uid' });
+    if (localState.isDisliked) await supa.from("likes").upsert({ key: pKey, uid: currentUser.id, value: false }, { onConflict: 'key,uid' });
+}
+    
+async function loadComments() {    
+    const pKey = parseInt(currentPost.id);    
+    const { data } = await supa.from("comments").select(`*, profiles (full_name, avatar_url)`).eq("post_key", pKey).order("time", { ascending: false });    
+    const feed = document.getElementById("commentsFeed");    
+    if (!data || data.length === 0) { feed.innerHTML = `<p class="empty-state">No comments yet.</p>`; return; }    
+    feed.innerHTML = data.map(c => {    
+        const timeStr = new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `    
+            <div class="comment-block">    
+                <div class="comment-header">    
+                    <div class="comment-user" onclick="viewProfile('${c.uid}')">    
+                        <img src="${c.profiles?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="comment-avatar">    
+                        <span class="user-name">${c.profiles?.full_name || "Student"} <span class="comment-time">${timeStr}</span></span>    
+                    </div>    
+                    ${c.uid === currentUser.id ? `<button onclick="deleteComment(${c.key})" class="delete-btn"><i class="fa-solid fa-trash-can"></i></button>` : ''}    
+                </div>    
+                <div class="comment-body"><p class="comment-text">${c.message}</p></div>    
+            </div>`;    
+    }).join("");    
+}    
+
+function renderPostActions() {
+    const menu = document.getElementById("postMenu");
+    menu.innerHTML = (currentPost.uid === currentUser.id) 
+        ? `<button class="delete-opt" onclick="deletePost()">Delete Post</button>` 
+        : `<button onclick="reportPost()">Report Post</button>`;
+}
+
+async function deletePost() {
+    if (!confirm("Delete post?")) return;
+    await supa.from("posts").delete().eq("id", currentPost.id);
+    window.location.href = "home.html";
+}
+
+function reportPost() { alert("Reported."); document.getElementById("postMenu").classList.remove("show"); }
+
+async function deleteComment(id) {    
+    if (!confirm("Delete comment?")) return;    
+    await supa.from("comments").delete().eq("key", id).eq("uid", currentUser.id);    
+    loadComments();    
+    const { count } = await supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", parseInt(currentPost.id));
+    document.getElementById("commentCount").innerText = count || 0;
+}    
+    
+function setupListeners() {    
+    document.getElementById("likeBtn").onclick = handleLike;    
+    document.getElementById("dislikeBtn").onclick = handleDislike;    
+    document.getElementById("closeModal").onclick = () => document.getElementById("imageModal").style.display = "none";
+    document.getElementById("imageModal").onclick = (e) => { if(e.target.id === "imageModal") document.getElementById("imageModal").style.display = "none"; };
+    const moreBtn = document.getElementById("postMoreBtn");
+    const postMenu = document.getElementById("postMenu");
+    moreBtn.onclick = (e) => { e.stopPropagation(); postMenu.classList.toggle("show"); };
+
+    document.getElementById("sendComment").onclick = async () => {    
+        const textarea = document.getElementById("commentInput");    
+        const val = textarea.value.trim();    
+        if (!val) return;    
+        
+        const { error } = await supa.from("comments").insert({ 
+            post_key: parseInt(currentPost.id), 
+            uid: currentUser.id, 
+            message: val 
+        });    
+
+        if (!error) {
+            // Trigger Notification
+            sendNotification('comment', val.substring(0, 50));
+        }
+
+        textarea.value = "";    
+        loadComments();    
+        const { count } = await supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", parseInt(currentPost.id));
+        document.getElementById("commentCount").innerText = count || 0;
+    };    
+    
+    const sidePanel = document.getElementById("sidePanel");    
+    document.getElementById("menuToggle").onclick = (e) => { e.stopPropagation(); sidePanel.classList.toggle("active"); };    
+    document.addEventListener("click", () => { sidePanel.classList.remove("active"); postMenu.classList.remove("show"); });    
+    document.getElementById("logoutBtn").onclick = async () => { await supa.auth.signOut(); window.location.href = "sign.html"; };    
+}    
+window.onload = init;    
+</script>    
+</body>    
+</html>
