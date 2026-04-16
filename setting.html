@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Drawer and Layout consistency */
+        /* Re-adding the structural styles you liked */
         .side-panel {
             position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
             background: #121212; z-index: 4000; transition: 0.3s ease;
@@ -27,7 +27,6 @@
             margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;
         }
 
-        /* Success Toast Notification */
         #toast {
             visibility: hidden; min-width: 250px; background-color: #4caf50;
             color: #fff; text-align: center; border-radius: 8px;
@@ -40,7 +39,6 @@
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
-        /* Modal Styles */
         .modal { 
             display: none; position: fixed; z-index: 5000; 
             left: 0; top: 0; width: 100%; height: 100%; 
@@ -50,17 +48,18 @@
         .modal-content { 
             background: #1a1a1a; padding: 25px; border-radius: 15px; 
             width: 90%; max-width: 400px; border: 1px solid #2a2a2a; color: white;
+            max-height: 90vh; overflow-y: auto;
         }
         .modal-content input, .modal-content textarea { 
             width: 100%; padding: 12px; margin-bottom: 15px; 
             background: #252525; border: 1px solid #333; 
-            border-radius: 8px; color: white; box-sizing: border-box;
-            font-family: inherit;
+            border-radius: 8px; color: white; box-sizing: border-box; font-family: inherit;
         }
         
         .save-btn { background: #a881ff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; }
         .cancel-btn { background: transparent; color: #888; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 5px; }
         .header-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+        .input-label { font-size: 0.75rem; color: #a881ff; margin-bottom: 4px; display: block; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -70,16 +69,23 @@
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h3>Update Profile</h3>
-            <p style="font-size: 0.8rem; color: #888; margin-bottom: 5px;">Full Name</p>
+            
+            <label class="input-label">Full Name</label>
             <input type="text" id="newName" placeholder="Full Name">
             
-            <p style="font-size: 0.8rem; color: #888; margin-bottom: 5px;">Bio</p>
-            <textarea id="newBio" placeholder="Tell the community about yourself..." style="width: 100%; height: 100px; background: #252525; border: 1px solid #333; border-radius: 8px; color: white; padding: 12px; font-family: inherit; resize: none;"></textarea>
+            <label class="input-label">Matric Number</label>
+            <input type="text" id="newMatric" placeholder="e.g. UG/2024/1234">
+
+            <label class="input-label">Admission Year</label>
+            <input type="number" id="newYear" placeholder="e.g. 2024">
             
-            <p style="font-size: 0.8rem; color: #888; margin-bottom: 5px;">Profile Picture</p>
-            <input type="file" id="avatarFile" accept="image/*" style="font-size: 0.8rem; margin-bottom: 20px;">
+            <label class="input-label">Bio</label>
+            <textarea id="newBio" placeholder="Tell the community about yourself..." style="height: 80px; resize: none;"></textarea>
             
-            <button class="save-btn" id="saveProfileBtn" onclick="handleSave()">Save Changes</button>
+            <label class="input-label">Profile Picture</label>
+            <input type="file" id="avatarFile" accept="image/*">
+            
+            <button class="save-btn" id="saveProfileBtn">Save Changes</button>
             <button class="cancel-btn" onclick="closeAllModals()">Cancel</button>
         </div>
     </div>
@@ -99,6 +105,7 @@
             <div class="user-profile-header">
                 <div class="profile-text">
                     <h1 id="displayUsername">Loading...</h1>
+                    <p id="displayMatric" style="color: #888; font-size: 0.9rem; margin-top: -5px;"></p>
                     <a href="#" class="edit-link" id="openEdit">Edit name, bio & avatar</a>
                 </div>
                 <img id="displayAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="header-avatar">
@@ -143,7 +150,7 @@
             <nav class="menu">
                 <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>
                 <a href="cpost.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>
-                <a href="notifications.html"><i class="fa-solid fa-bell"></i> Notifications</a>
+                <a href="notice.html"><i class="fa-solid fa-bell"></i> Notifications</a>
                 <a href="setting.html" class="active-link"><i class="fa-solid fa-gear"></i> Settings</a>
                 <a href="#" id="sideLogout" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
             </nav>
@@ -155,32 +162,92 @@
         const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
         const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         let currentUser;
+        let currentProfileData = {};
 
         async function init() {
             const { data: { user } } = await supa.auth.getUser();
             if (!user) return window.location.href = "sign.html";
             currentUser = user;
 
-            const { data: profile } = await supa.from('profiles').select('*').eq('id', user.id).single();
+            // Fetch live data from profiles table
+            const { data: profile, error } = await supa.from('profiles').select('*').eq('id', user.id).single();
+            currentProfileData = profile || {};
 
-            const name = profile?.full_name || user.user_metadata?.full_name || "Student";
-            const avatar = profile?.avatar_url || user.user_metadata?.avatar_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+            const name = currentProfileData.full_name || user.user_metadata?.full_name || "Student";
+            const avatar = currentProfileData.avatar_url || user.user_metadata?.avatar_url || DEFAULT_AVATAR;
+            const matric = currentProfileData.matric_no || "No Matric No.";
 
             document.getElementById("displayUsername").innerText = name;
             document.getElementById("displayAvatar").src = avatar;
+            document.getElementById("displayMatric").innerText = matric;
+            
             document.getElementById("sideName").innerText = name;
             document.getElementById("sideEmail").innerText = user.email;
             document.getElementById("sideAvatar").src = avatar;
             
+            // Set Modal Values
             document.getElementById("newName").value = name;
-            document.getElementById("newBio").value = profile?.bio || "";
+            document.getElementById("newBio").value = currentProfileData.bio || "";
+            document.getElementById("newMatric").value = currentProfileData.matric_no || "";
+            document.getElementById("newYear").value = currentProfileData.admission_year || "";
             
             setupDrawer();
         }
 
+        async function handleSave() {
+            const btn = document.getElementById("saveProfileBtn");
+            const name = document.getElementById("newName").value.trim();
+            const bio = document.getElementById("newBio").value.trim();
+            const matric = document.getElementById("newMatric").value.trim();
+            const year = document.getElementById("newYear").value;
+            const file = document.getElementById("avatarFile").files[0];
+
+            if(!name) return alert("Name is required");
+            btn.innerText = "Saving...";
+            btn.disabled = true;
+
+            try {
+                let avatarUrl = currentProfileData.avatar_url || DEFAULT_AVATAR;
+
+                if (file) {
+                    const fileName = `${currentUser.id}-${Date.now()}.jpg`;
+                    await supa.storage.from('post_images').upload(`avatars/${fileName}`, file);
+                    avatarUrl = supa.storage.from('post_images').getPublicUrl(`avatars/${fileName}`).data.publicUrl;
+                }
+
+                // Update Profile Table based on your SQL schema
+                const { error: dbError } = await supa.from('profiles').update({ 
+                    full_name: name, 
+                    avatar_url: avatarUrl, 
+                    bio: bio,
+                    matric_no: matric,
+                    admission_year: year ? parseInt(year) : null
+                }).eq('id', currentUser.id);
+
+                if (dbError) throw dbError;
+
+                // Sync Auth metadata for other pages
+                await supa.auth.updateUser({ 
+                    data: { full_name: name, avatar_url: avatarUrl } 
+                });
+
+                closeAllModals();
+                showToast();
+                setTimeout(() => location.reload(), 1500); 
+            } catch (err) {
+                alert(err.message);
+                btn.innerText = "Save Changes";
+                btn.disabled = false;
+            }
+        }
+
         function goToMyProfile() {
-            if (currentUser) window.location.href = `profile.html?uid=${currentUser.id}`;
+            if (currentUser) {
+                localStorage.setItem("viewProfileUid", currentUser.id);
+                window.location.href = `profile.html`;
+            }
         }
 
         function showToast() {
@@ -191,52 +258,12 @@
 
         function closeAllModals() { document.getElementById("editModal").classList.remove("show"); }
         document.getElementById("openEdit").onclick = () => document.getElementById("editModal").classList.add("show");
-
-        async function handleSave() {
-            const btn = document.getElementById("saveProfileBtn");
-            const name = document.getElementById("newName").value.trim();
-            const bio = document.getElementById("newBio").value.trim();
-            const file = document.getElementById("avatarFile").files[0];
-
-            if(!name) return alert("Name is required");
-            btn.innerText = "Saving...";
-            btn.disabled = true;
-
-            try {
-                let avatarUrl = currentUser.user_metadata?.avatar_url;
-
-                if (file) {
-                    const fileName = `avatars/${currentUser.id}-${Date.now()}.jpg`;
-                    const { error: uploadError } = await supa.storage.from('post_images').upload(fileName, file);
-                    if (uploadError) throw uploadError;
-                    avatarUrl = supa.storage.from('post_images').getPublicUrl(fileName).data.publicUrl;
-                }
-
-                await supa.auth.updateUser({ data: { full_name: name, avatar_url: avatarUrl } });
-                await supa.from('profiles').upsert({ id: currentUser.id, full_name: name, avatar_url: avatarUrl, bio: bio });
-
-                closeAllModals();
-                showToast();
-                
-                // Update local UI
-                document.getElementById("displayUsername").innerText = name;
-                document.getElementById("displayAvatar").src = avatarUrl;
-                document.getElementById("sideName").innerText = name;
-                document.getElementById("sideAvatar").src = avatarUrl;
-                
-                btn.innerText = "Save Changes";
-                btn.disabled = false;
-            } catch (err) {
-                alert(err.message);
-                btn.innerText = "Save Changes";
-                btn.disabled = false;
-            }
-        }
+        document.getElementById("saveProfileBtn").onclick = handleSave;
 
         function setupDrawer() {
             const menuToggle = document.getElementById("menuToggle");
-            const closeDrawer = document.getElementById("closeDrawer");
             const panel = document.getElementById("sidePanel");
+            const closeDrawer = document.getElementById("closeDrawer");
 
             menuToggle.onclick = e => { e.stopPropagation(); panel.classList.add("active"); };
             closeDrawer.onclick = () => panel.classList.remove("active");
