@@ -1,0 +1,172 @@
+:root {
+    --bg-black: #121212;
+    --bg-dark-gray: #1a1a1a;
+    --accent-purple: #a881ff;
+    --text-main: #ffffff;
+    --text-dim: #888;
+    --border-color: #2a2a2a;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: var(--bg-black);
+    color: var(--text-main);
+    overflow-x: hidden;
+}
+
+/* --- Fixed Header Section --- */
+.top-nav {
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-black);
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px; /* Reduced padding for a sleeker look */
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Keep Back Icon and Title on one line */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px; 
+}
+
+.nav-left a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-main);
+    font-size: 1.1rem;
+}
+
+.nav-left h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.nav-right i {
+    margin-left: 20px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+}
+
+/* --- Layout --- */
+.app-layout {
+    display: flex;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.settings-container {
+    flex: 2;
+    padding: 20px 30px;
+}
+
+/* --- Profile Header --- */
+.user-profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 0;
+}
+
+.profile-text h1 { font-size: 1.8rem; font-weight: 600; }
+.edit-link { color: var(--text-dim); text-decoration: none; font-size: 0.9rem; }
+.header-avatar { width: 65px; height: 65px; border-radius: 50%; object-fit: cover; }
+
+/* --- Settings Items --- */
+.settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.settings-item span { font-size: 1.05rem; color: #e0e0e0; }
+.settings-item i { color: var(--text-dim); font-size: 1.2rem; }
+.settings-item:hover { background: rgba(255,255,255,0.02); padding-left: 5px; }
+
+/* --- Side Drawer --- */
+.side-panel {
+    flex: 1;
+    background-color: var(--bg-dark-gray);
+    transition: 0.3s ease-in-out;
+    min-height: 100vh;
+}
+
+.cover-photo {
+    height: 120px;
+    background: linear-gradient(to bottom, var(--accent-purple), #6a4cff);
+}
+
+.profile-card {
+    text-align: center;
+    margin-top: -40px;
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.profile-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 4px solid var(--bg-dark-gray);
+    margin-bottom: 10px;
+}
+
+.menu a {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 30px;
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.menu a i { color: var(--text-dim); width: 20px; text-align: center; }
+
+.active-link, .menu a:hover {
+    background: #252525;
+    color: var(--accent-purple) !important;
+}
+
+.active-link i, .menu a:hover i { color: var(--accent-purple) !important; }
+
+.logout-link { 
+    color: #ff5e5e !important; 
+    margin-top: 10px; 
+    border-top: 1px solid var(--border-color); 
+}
+
+/* --- Responsive Drawer --- */
+@media (max-width: 900px) {
+    .side-panel {
+        position: fixed;
+        top: 0;
+        right: -300px; 
+        width: 280px;
+        height: 100vh;
+        z-index: 1000;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    }
+    .side-panel.active { right: 0; }
+}
+
+@media (min-width: 901px) {
+    #menuToggle { display: none; }
+}

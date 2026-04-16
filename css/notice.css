@@ -1,0 +1,117 @@
+:root {
+    --bg-black: #121212;
+    --bg-dark-gray: #1a1a1a;
+    --accent-purple: #a881ff;
+    --text-main: #ffffff;
+    --text-dim: #888;
+    --border-color: #2a2a2a;
+}
+
+/* --- HEADER FIXES --- */
+.nav-left { display: flex; align-items: center; gap: 15px; }
+.back-btn { color: white; text-decoration: none; font-size: 1.2rem; }
+.nav-right { display: flex; align-items: center; gap: 15px; }
+
+/* --- SORT DROPDOWN --- */
+.sort-wrapper { position: relative; }
+
+.sort-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 40px;
+    background: var(--bg-dark-gray);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 160px;
+    flex-direction: column;
+    z-index: 1000;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+.sort-dropdown.active { display: flex; }
+
+.sort-dropdown a {
+    padding: 12px 15px;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: 0.2s;
+}
+
+.sort-dropdown a:hover { background: #252525; color: var(--accent-purple); }
+
+/* --- NOTIFICATION ITEMS --- */
+.notification-item {
+    display: flex;
+    align-items: center;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border-color);
+    transition: 0.2s;
+}
+
+.notification-item.unread { background: rgba(168, 129, 255, 0.05); }
+
+.notice-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.notice-content { flex: 1; }
+.notice-content p { font-size: 0.95rem; color: #ddd; line-height: 1.4; }
+.notice-content strong { color: white; }
+.notice-time { font-size: 0.8rem; color: var(--text-dim); display: block; margin-top: 4px; }
+
+.follow-back-btn {
+    background: var(--accent-purple);
+    color: black;
+    border: none;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* --- MOBILE DRAWER FIXES (Matches Home) --- */
+@media (max-width: 900px) {
+    .side-panel {
+        position: fixed;
+        right: -300px;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 2000;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    }
+    .side-panel.active { right: 0; }
+}
+
+/* Ensure content doesn't hide behind the sticky header */
+.feed-container {
+    padding-top: 20px;
+    background: var(--bg-black);
+    min-height: 100vh;
+}
+
+/* Fix for the sort dropdown to appear above everything */
+.sort-dropdown {
+    z-index: 3000;
+}
+
+/* Unread indicator - subtle purple glow */
+.notification-item.unread {
+    border-left: 4px solid var(--accent-purple);
+    background: rgba(168, 129, 255, 0.03);
+}
+
+.notice-avatar {
+    border: 1px solid var(--border-color);
+}

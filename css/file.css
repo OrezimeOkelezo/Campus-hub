@@ -1,0 +1,159 @@
+/* --- Corrected Header & Back Button --- */
+.nav-header-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.back-nav-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: white;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.back-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.back-nav-btn i {
+    font-size: 1.2rem;
+}
+
+.page-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* --- Search Bar UI --- */
+.nav-search-mode {
+    flex: 1;
+    margin: 0 10px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: #222;
+    padding: 8px 15px;
+    border-radius: 25px;
+    width: 100%;
+}
+
+.search-input-wrapper input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.search-input-wrapper i {
+    color: #777;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+/* --- File List Styling --- */
+.file-list-container {
+    padding: 15px;
+}
+
+.file-card {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.file-card:hover {
+    border-color: #a881ff;
+    background: #222;
+}
+
+.file-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-right: 15px;
+}
+
+.file-details {
+    flex: 1;
+    overflow: hidden;
+}
+
+.file-title {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #efefef;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-date {
+    font-size: 0.75rem;
+    color: #777;
+}
+
+.download-icon {
+    color: #444;
+    font-size: 1.2rem;
+}
+
+/* --- Modal UI --- */
+.modal { 
+    display: none; position: fixed; z-index: 5000; 
+    left: 0; top: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.85); justify-content: center; align-items: center; 
+}
+.modal.show { display: flex; }
+
+.modal-content {
+    background: #1a1a1a; padding: 25px; border-radius: 20px; 
+    width: 85%; max-width: 380px; border: 1px solid #333; color: white;
+    text-align: center;
+}
+
+.modal-subtitle { font-size: 0.8rem; color: #888; margin-bottom: 20px; }
+
+.upload-dropzone {
+    border: 2px dashed #444; padding: 30px; border-radius: 15px;
+    cursor: pointer; margin-bottom: 20px; transition: 0.2s;
+}
+
+.upload-dropzone:hover { border-color: #a881ff; background: #222; }
+.upload-dropzone i { font-size: 2.5rem; color: #a881ff; margin-bottom: 10px; }
+
+.primary-action-btn { background: #a881ff; color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 600; }
+.secondary-action-btn { background: transparent; color: #888; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 5px; }
+
+/* --- Success Toast --- */
+#toast {
+    visibility: hidden; min-width: 200px; background-color: #4caf50;
+    color: white; text-align: center; border-radius: 10px;
+    padding: 16px; position: fixed; z-index: 6000;
+    left: 50%; bottom: 30px; transform: translateX(-50%);
+}
+#toast.show { visibility: visible; animation: slideUp 0.5s, slideDown 0.5s 2.5s; }
+
+@keyframes slideUp { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+@keyframes slideDown { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
