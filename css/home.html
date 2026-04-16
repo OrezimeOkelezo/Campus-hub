@@ -1,0 +1,239 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Home - Student Connect</title>  
+    <link rel="stylesheet" href="css/home.css">  
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">  
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  
+</head>  
+  
+<body>  
+  
+<header class="top-nav">  
+    <div class="header-inner">  
+        <div class="nav-left"><h2 id="displayGreeting">Hi,</h2></div>  
+        <div class="nav-right">  
+            <a href="search.html" class="icon-btn"><i class="fa-solid fa-magnifying-glass"></i></a>  
+            <div class="icon-btn" id="menuToggle"><i class="fa-solid fa-bars"></i></div>  
+        </div>  
+    </div>  
+</header>  
+  
+<div class="app-layout">  
+    <main class="feed-container" id="feedContainer">  
+        <div class="feed-status">Loading community...</div>  
+    </main>  
+  
+    <aside class="side-panel" id="sidePanel">  
+        <div class="cover-photo"></div>  
+        <div class="profile-card">  
+            <img id="sideAvatar" class="profile-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">  
+            <h3 id="sideName">Username</h3>  
+            <p id="sideEmail">email@email.com</p>  
+        </div>  
+        <nav class="menu">  
+            <a href="home.html" class="active-link"><i class="fa-solid fa-house"></i> Home</a>  
+            <a href="file.html"><i class="fa-solid fa-folder-open"></i> Files</a>  
+            <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>  
+            <a href="#" id="myPostLink"><i class="fa-solid fa-pen-to-square"></i> My post</a>  
+            <a href="#" id="logoutTrigger" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>  
+        </nav>  
+    </aside>  
+</div>  
+  
+<div id="logoutModal" class="modal-overlay">  
+    <div class="modal-content">  
+        <h3>Logout?</h3>  
+        <p>Are you sure you want to leave?</p>  
+        <div class="modal-actions">  
+            <button id="cancelLogout">Cancel</button>  
+            <button id="confirmLogout">Logout</button>  
+        </div>  
+    </div>  
+</div>  
+  
+<a href="cpost.html" class="mobile-fab"><i class="fa-solid fa-plus"></i></a>  
+  
+<script>
+const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje';
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+// =======================
+// INIT
+// =======================
+async function init() {
+    try {
+        const { data: { user } } = await supa.auth.getUser();
+
+        if (!user) {
+            window.location.href = "sign.html";
+            return;
+        }
+
+        // Setup Sidebar & Greeting
+        const meta = user.user_metadata || {};
+        const name = meta.full_name || "Student";
+
+        document.getElementById("displayGreeting").innerText = `Hi, ${name.split(" ")[0]}`;
+        document.getElementById("sideName").innerText = name;
+        document.getElementById("sideEmail").innerText = user.email;
+        document.getElementById("sideAvatar").src = meta.avatar_url || DEFAULT_AVATAR;
+
+        // Dynamic Link for My post
+        document.getElementById("myPostLink").href = `profile.html?uid=${user.id}`;
+
+        loadPosts();
+
+    } catch (err) {
+        console.error("Init error:", err);
+    }
+}
+
+// =======================
+// LOAD POSTS (Using Joins)
+// =======================
+async function loadPosts() {
+    const container = document.getElementById("feedContainer");
+
+    // Load Cache
+    const cached = sessionStorage.getItem("cached_feed");
+    if (cached) renderPosts(JSON.parse(cached));
+
+    // Fetch posts with profile data via Foreign Key (uid)
+    const { data: posts, error } = await supa
+        .from("posts")
+        .select(`
+            *,
+            profiles:uid (
+                full_name,
+                avatar_url
+            )
+        `)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Fetch error:", error);
+        if (!cached) container.innerHTML = `<div class="feed-status">Failed to load posts</div>`;
+        return;
+    }
+
+    // Attach Interaction Counts
+    const finalPosts = await Promise.all(
+        posts.map(async (post) => {
+            const profile = post.profiles;
+            
+            // Logic: Use profile data, fallback to defaults if null
+            const name = profile?.full_name || "Anonymous";
+            const avatar = profile?.avatar_url || DEFAULT_AVATAR;
+
+            const [likes, dislikes, comments] = await Promise.all([
+                supa.from("likes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
+                supa.from("dislikes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
+                supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", post.id)
+            ]);
+
+            return {
+                ...post,
+                name,
+                avatar,
+                lCount: likes.count || 0,
+                dCount: dislikes.count || 0,
+                cCount: comments.count || 0
+            };
+        })
+    );
+
+    const freshString = JSON.stringify(finalPosts);
+    if (cached !== freshString) {
+        sessionStorage.setItem("cached_feed", freshString);
+        renderPosts(finalPosts);
+    }
+}
+
+// =======================
+// RENDER
+// =======================
+function renderPosts(posts) {
+    const container = document.getElementById("feedContainer");
+    if (!posts || posts.length === 0) {
+        container.innerHTML = `<div class="feed-status">No posts available</div>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    posts.forEach(post => {
+        const images = [post.img1, post.img2, post.img3, post.img4].filter(Boolean);
+        const gridClass = images.length > 1 ? `grid-${images.length}` : "";
+
+        const div = document.createElement("div");
+        div.className = "post";
+        div.onclick = () => {
+            localStorage.setItem("selectedPost", JSON.stringify(post));
+            window.location.href = "post.html";
+        };
+
+        div.innerHTML = `
+            <img src="${post.avatar}" class="avatar" onerror="this.src='${DEFAULT_AVATAR}'">
+            <div class="post-body">
+                <div class="post-header">
+                    <span class="name">${post.name}</span>
+                    <span class="meta">@ • ${timeAgo(post.created_at)}</span>
+                </div>
+                <div class="views"><i class="fa-regular fa-eye"></i> ${post.view || 0} views</div>
+                <p>${post.text || ""}</p>
+                ${images.length ? `
+                    <div class="media-grid ${gridClass}">
+                        ${images.map(img => `<img src="${img}" loading="lazy">`).join("")}
+                    </div>
+                ` : ""}
+                <div class="actions">
+                    <span><i class="fa-regular fa-thumbs-up"></i> ${post.lCount}</span>
+                    <span><i class="fa-regular fa-thumbs-down"></i> ${post.dCount}</span>
+                    <span><i class="fa-regular fa-comment"></i> ${post.cCount}</span>
+                </div>
+            </div>
+        `;
+        fragment.appendChild(div);
+    });
+
+    container.innerHTML = "";
+    container.appendChild(fragment);
+}
+
+// =======================
+// HELPERS & UI
+// =======================
+function timeAgo(date) {
+    if (!date) return "Just now";
+    const diff = Math.floor((new Date() - new Date(date)) / 60000);
+    if (diff < 1) return "Just now";
+    if (diff < 60) return diff + "m";
+    if (diff < 1440) return Math.floor(diff / 60) + "h";
+    return Math.floor(diff / 1440) + "d";
+}
+
+const menuToggle = document.getElementById("menuToggle");
+const panel = document.getElementById("sidePanel");
+const modal = document.getElementById("logoutModal");
+
+menuToggle.onclick = e => { e.stopPropagation(); panel.classList.toggle("active"); };
+document.onclick = e => { if (!panel.contains(e.target) && !menuToggle.contains(e.target)) panel.classList.remove("active"); };
+
+document.getElementById("logoutTrigger").onclick = e => { e.preventDefault(); modal.classList.add("show"); };
+document.getElementById("cancelLogout").onclick = () => modal.classList.remove("show");
+document.getElementById("confirmLogout").onclick = async () => {
+    await supa.auth.signOut();
+    window.location.href = "sign.html";
+};
+
+window.onload = init;
+</script>
+</body>  
+</html>

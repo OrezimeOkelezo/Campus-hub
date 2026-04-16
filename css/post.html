@@ -48,7 +48,6 @@
 
         .avatar-header, .author-name, .comment-user { cursor: pointer; }
 
-        /* Lightbox Modal */
         .image-modal {
             display: none;
             position: fixed;
@@ -102,8 +101,7 @@
                 <button class="options-btn" id="postMoreBtn"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                 <div class="options-menu" id="postMenu"></div>
             </div>
-            <i class="fa-solid fa-bars" id="menuToggle"></i>    
-        </div>    
+            </div>    
     </div>    
 </header>    
     
@@ -133,24 +131,7 @@
             </section>    
         </article>    
     </main>    
-    
-    <aside class="side-panel" id="sidePanel">    
-        <div class="cover-photo"></div>    
-        <div class="profile-card">    
-            <img id="myAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-img">    
-            <h3 id="myName">Student Name</h3>    
-            <p id="myEmail"></p>    
-        </div>    
-        <nav class="menu">    
-            <a href="home.html"><i class="fa-solid fa-house"></i> Home</a>    
-            <a href="cpost.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>    
-            <a href="notice.html"><i class="fa-solid fa-bell"></i> Notifications</a>
-            <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>    
-            <hr class="nav-divider">    
-            <a href="#" id="logoutBtn" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>    
-        </nav>    
-    </aside>    
-</div>    
+    </div>    
     
 <div class="comment-input-area">    
     <div class="input-wrapper">    
@@ -172,11 +153,6 @@ async function init() {
     const { data: { user } } = await supa.auth.getUser();    
     if (!user) return window.location.href = "sign.html";    
     currentUser = user;    
-    
-    const { data: myProfile } = await supa.from('profiles').select('full_name, avatar_url').eq('id', user.id).single();
-    document.getElementById("myAvatar").src = myProfile?.avatar_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";    
-    document.getElementById("myName").innerText = myProfile?.full_name || "Student";    
-    document.getElementById("myEmail").innerText = user.email;    
     
     const saved = localStorage.getItem("selectedPost");    
     if (!saved) return window.location.href = "home.html";    
@@ -264,9 +240,7 @@ function syncUI() {
 }
 
 async function sendNotification(type, content = null) {
-    // Only send if I am not the owner of the post
     if (currentUser.id === currentPost.uid) return;
-    
     await supa.from('notifications').insert({
         sender_id: currentUser.id,
         receiver_id: currentPost.uid,
@@ -283,7 +257,6 @@ async function handleLike() {
     } else { 
         if (localState.isDisliked) { localState.isDisliked = false; localState.dislikes--; } 
         localState.isLiked = true; localState.likes++; 
-        // Trigger Notification
         sendNotification('like');
     }
     syncUI();
@@ -298,7 +271,6 @@ async function handleDislike() {
     } else { 
         if (localState.isLiked) { localState.isLiked = false; localState.likes--; } 
         localState.isDisliked = true; localState.dislikes++; 
-        // Trigger Notification
         sendNotification('dislike');
     }
     syncUI();
@@ -340,7 +312,25 @@ async function deletePost() {
     window.location.href = "home.html";
 }
 
-function reportPost() { alert("Reported."); document.getElementById("postMenu").classList.remove("show"); }
+async function reportPost() { 
+    try {
+        const { error } = await supa
+            .from('posts')
+            .update({ report: (currentPost.report || 0) + 1 })
+            .eq('id', currentPost.id);
+
+        if (error) throw error;
+
+        alert("Thank you for reporting. This post has been submitted for review.");
+        currentPost.report = (currentPost.report || 0) + 1;
+        
+    } catch (err) {
+        console.error("Report error:", err);
+        alert("Reported."); 
+    } finally {
+        document.getElementById("postMenu").classList.remove("show"); 
+    }
+}
 
 async function deleteComment(id) {    
     if (!confirm("Delete comment?")) return;    
@@ -371,7 +361,6 @@ function setupListeners() {
         });    
 
         if (!error) {
-            // Trigger Notification
             sendNotification('comment', val.substring(0, 50));
         }
 
@@ -381,10 +370,7 @@ function setupListeners() {
         document.getElementById("commentCount").innerText = count || 0;
     };    
     
-    const sidePanel = document.getElementById("sidePanel");    
-    document.getElementById("menuToggle").onclick = (e) => { e.stopPropagation(); sidePanel.classList.toggle("active"); };    
-    document.addEventListener("click", () => { sidePanel.classList.remove("active"); postMenu.classList.remove("show"); });    
-    document.getElementById("logoutBtn").onclick = async () => { await supa.auth.signOut(); window.location.href = "sign.html"; };    
+    document.addEventListener("click", () => { postMenu.classList.remove("show"); });    
 }    
 window.onload = init;    
 </script>    
