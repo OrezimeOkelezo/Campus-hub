@@ -66,43 +66,56 @@
             element.textContent = input.type === "password" ? "👁️" : "🙈";
         }
 
-        // 2. UPDATE PASSWORD LOGIC
+        // Helper to show messages
+        function showStatus(text, isError = true) {
+            statusMsg.innerText = text;
+            statusMsg.style.color = isError ? "#ff5e5e" : "#00c853";
+            statusMsg.style.display = "block";
+        }
+
+        // 2. SESSION VALIDATION
+        // This checks if the access_token in your URL is valid when the page loads
+        window.onload = async () => {
+            const { data: { session }, error } = await _supabase.auth.getSession();
+            if (error || !session) {
+                showStatus("Invalid or expired reset link. Please request a new one.");
+                confirmBtn.disabled = true;
+                confirmBtn.style.opacity = "0.5";
+            }
+        };
+
+        // 3. UPDATE PASSWORD LOGIC
         updateForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
-            // Basic validation
             if (newPassword !== confirmPassword) {
-                statusMsg.innerText = "Passwords do not match!";
-                statusMsg.style.color = "#ff5e5e";
-                statusMsg.style.display = "block";
+                showStatus("Passwords do not match!");
                 return;
             }
 
             confirmBtn.innerText = "Updating...";
             confirmBtn.disabled = true;
 
-            // Supabase password update
-            const { data, error } = await _supabase.auth.updateUser({
+            // Update user password using the session from the URL
+            const { error } = await _supabase.auth.updateUser({
                 password: newPassword
             });
 
             if (error) {
-                statusMsg.innerText = "Error: " + error.message;
-                statusMsg.style.color = "#ff5e5e";
-                statusMsg.style.display = "block";
+                showStatus("Error: " + error.message);
                 confirmBtn.innerText = "Confirm Reset";
                 confirmBtn.disabled = false;
             } else {
-                statusMsg.innerText = "Password updated! Redirecting to login...";
-                statusMsg.style.color = "#00c853";
-                statusMsg.style.display = "block";
+                showStatus("Password updated! Redirecting to login...", false);
                 
-                // Redirect to login after 2 seconds
+                // Sign out to clear the recovery session
+                await _supabase.auth.signOut();
+
                 setTimeout(() => {
-                    window.location.href = "sign.html";
+                    window.location.href = "login.html";
                 }, 2000);
             }
         });
