@@ -1,229 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home - Student Connect</title>
-
-<link rel="stylesheet" href="css/home.css">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password - Student Connect</title>
+    <link rel="stylesheet" href="css/sign.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
+    <div class="container">
+        <div class="login-section">
+            <div class="form-wrapper">
+                <h1>Reset Password</h1>
+                <p class="subtitle">Enter your new secure password below</p>
 
-<!-- HEADER -->
-<header class="top-nav">
-    <div class="header-inner">
+                <form id="updatePasswordForm">
+                    <div class="input-group">
+                        <div class="password-wrapper">
+                            <input type="password" id="newPassword" placeholder="New Password" required minlength="6">
+                            <span class="toggle-password" onclick="toggleVisibility('newPassword', this)">👁️</span>
+                        </div>
+                    </div>
 
-        <div class="nav-left">
-            <h2 id="displayGreeting">Hi, Student</h2>
-        </div>
+                    <div class="input-group">
+                        <div class="password-wrapper">
+                            <input type="password" id="confirmPassword" placeholder="Confirm Password" required minlength="6">
+                            <span class="toggle-password" onclick="toggleVisibility('confirmPassword', this)">👁️</span>
+                        </div>
+                    </div>
 
-        <div class="nav-right">
-            <a href="search.html" class="icon-btn">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </a>
+                    <div id="statusMsg" style="display:none; font-size:0.85rem; margin-bottom:15px;"></div>
 
-            <div class="icon-btn" id="menuToggle">
-                <i class="fa-solid fa-bars"></i>
+                    <button type="submit" class="login-btn" id="confirmBtn">Confirm Reset</button>
+                </form>
             </div>
         </div>
 
-    </div>
-</header>
-
-<div class="app-layout">
-
-    <!-- FEED -->
-    <main class="feed-container" id="feedContainer">
-        <div class="feed-status">Loading your community...</div>
-    </main>
-
-    <!-- SIDE PANEL -->
-    <aside class="side-panel" id="sidePanel">
-
-        <div class="cover-photo"></div>
-
-        <div class="profile-card">
-            <img id="sideAvatar" class="profile-img">
-            <h3 id="sideName">Student</h3>
-            <p id="sideEmail">student@email.com</p>
-        </div>
-
-        <nav class="menu">
-            <a href="home.html" class="active-link"><i class="fa-solid fa-house"></i> Home</a>
-            <a href="cpost.html"><i class="fa-solid fa-pen-to-square"></i> My Post</a>
-            <a href="setting.html"><i class="fa-solid fa-gear"></i> Settings</a>
-            <a href="#"><i class="fa-solid fa-message"></i> Messages</a>
-            <a href="#" id="logoutTrigger" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-        </nav>
-
-    </aside>
-
-</div>
-
-<!-- LOGOUT MODAL -->
-<div id="logoutModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3>Logout?</h3>
-        <p>Are you sure you want to leave?</p>
-
-        <div class="modal-actions">
-            <button id="cancelLogout">Cancel</button>
-            <button id="confirmLogout">Logout</button>
-        </div>
-    </div>
-</div>
-
-<a href="cpost.html" class="mobile-fab">
-    <i class="fa-solid fa-plus"></i>
-</a>
-
-<script>
-const supa = supabase.createClient(
-'https://nwhskxqwtpkuiwkcdols.supabase.co',
-'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
-);
-
-/* ================= INIT ================= */
-async function init() {
-    const { data: { user } } = await supa.auth.getUser();
-
-    if (!user) {
-        window.location.href = "sign.html";
-        return;
-    }
-
-    const name = user.user_metadata.full_name || "Student";
-
-    document.getElementById("displayGreeting").innerText = "Hi, " + name.split(" ")[0];
-    document.getElementById("sideName").innerText = name;
-    document.getElementById("sideEmail").innerText = user.email;
-    document.getElementById("sideAvatar").src =
-        user.user_metadata.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-    loadPosts();
-}
-
-/* ================= LOAD POSTS ================= */
-async function loadPosts() {
-    const container = document.getElementById("feedContainer");
-
-    const { data: posts, error } = await supa
-        .from("posts")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-    if (error) {
-        container.innerHTML = `<div class="feed-status">Error loading posts</div>`;
-        return;
-    }
-
-    container.innerHTML = "";
-
-    posts.forEach(post => {
-
-        const images = [post.img1, post.img2, post.img3, post.img4].filter(Boolean);
-        let gridClass = images.length > 1 ? `grid-${images.length}` : "";
-
-        const div = document.createElement("div");
-        div.className = "post";
-
-        /* CLICK EVENT */
-        div.onclick = () => {
-            const postData = {
-                id: post.id,
-                uid: post.uid,
-                author_name: post.author_name,
-                author_avatar: post.author_avatar,
-                text: post.text,
-                img1: post.img1,
-                img2: post.img2,
-                img3: post.img3,
-                img4: post.img4,
-                like: post.like,
-                dislike: post.dislike,
-                comment: post.comment,
-                views: post.views,
-                created_at: post.created_at
-            };
-
-            localStorage.setItem("selectedPost", JSON.stringify(postData));
-            window.location.href = "post.html";
-        };
-
-        div.innerHTML = `
-            <img src="${post.author_avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar">
-
-            <div class="post-body">
-                <div class="post-header">
-                    <span class="name">${post.author_name}</span>
-                    <span class="meta">@student • ${timeAgo(post.created_at)}</span>
-                </div>
-
-                <div class="views">
-                    <i class="fa-regular fa-eye"></i> ${post.views || 0} views
-                </div>
-
-                <p>${post.text || ""}</p>
-
-                ${images.length ? `
-                <div class="media-grid ${gridClass}">
-                    ${images.map(img => `<img src="${img}">`).join("")}
-                </div>` : ""}
-
-                <div class="actions">
-                    <span><i class="fa-regular fa-thumbs-up"></i> ${post.like || 0}</span>
-                    <span><i class="fa-regular fa-thumbs-down"></i> ${post.dislike || 0}</span>
-                    <span><i class="fa-regular fa-comment"></i> ${post.comment || 0}</span>
+        <div class="welcome-section">
+            <div class="content">
+                <h2>Security First</h2>
+                <p>Ensure your new password is strong and easy for you to remember.</p>
+                <div class="illustration">
+                    <img src="img/img2.png" alt="Reset Illustration">
                 </div>
             </div>
-        `;
+        </div>
+    </div>
 
-        container.appendChild(div);
-    });
-}
+    <script>
+        // 1. INITIALIZE SUPABASE
+        const _supabase = supabase.createClient(
+            'https://nwhskxqwtpkuiwkcdols.supabase.co', 
+            'sb_publishable_tX-yn5PPUsrILFHsI5SALA__ovoxFje'
+        );
 
-/* ================= TIME FORMAT ================= */
-function timeAgo(date) {
-    const diff = Math.floor((new Date() - new Date(date)) / 60000);
-    return diff < 60 ? diff + "m" : Math.floor(diff / 60) + "h";
-}
+        const updateForm = document.getElementById('updatePasswordForm');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const statusMsg = document.getElementById('statusMsg');
 
-/* ================= MENU + MODAL ================= */
-const menu = document.getElementById("menuToggle");
-const panel = document.getElementById("sidePanel");
-const modal = document.getElementById("logoutModal");
+        // Toggle Password Visibility Function
+        function toggleVisibility(inputId, element) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === "password" ? "text" : "password";
+            element.textContent = input.type === "password" ? "👁️" : "🙈";
+        }
 
-menu.onclick = e => {
-    e.stopPropagation();
-    panel.classList.toggle("active");
-};
+        // 2. UPDATE PASSWORD LOGIC
+        updateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
 
-document.onclick = e => {
-    if (!panel.contains(e.target) && !menu.contains(e.target)) {
-        panel.classList.remove("active");
-    }
-};
+            // Basic validation
+            if (newPassword !== confirmPassword) {
+                statusMsg.innerText = "Passwords do not match!";
+                statusMsg.style.color = "#ff5e5e";
+                statusMsg.style.display = "block";
+                return;
+            }
 
-document.getElementById("logoutTrigger").onclick = e => {
-    e.preventDefault();
-    modal.classList.add("show");
-};
+            confirmBtn.innerText = "Updating...";
+            confirmBtn.disabled = true;
 
-document.getElementById("cancelLogout").onclick = () => modal.classList.remove("show");
+            // Supabase password update
+            const { data, error } = await _supabase.auth.updateUser({
+                password: newPassword
+            });
 
-document.getElementById("confirmLogout").onclick = async () => {
-    await supa.auth.signOut();
-    window.location.href = "sign.html";
-};
-
-/* START */
-init();
-</script>
-
+            if (error) {
+                statusMsg.innerText = "Error: " + error.message;
+                statusMsg.style.color = "#ff5e5e";
+                statusMsg.style.display = "block";
+                confirmBtn.innerText = "Confirm Reset";
+                confirmBtn.disabled = false;
+            } else {
+                statusMsg.innerText = "Password updated! Redirecting to login...";
+                statusMsg.style.color = "#00c853";
+                statusMsg.style.display = "block";
+                
+                // Redirect to login after 2 seconds
+                setTimeout(() => {
+                    window.location.href = "sign.html";
+                }, 2000);
+            }
+        });
+    </script>
 </body>
 </html>
