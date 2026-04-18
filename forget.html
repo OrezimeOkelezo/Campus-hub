@@ -93,7 +93,6 @@
             statusBox.style.display = "none";
 
             try {
-                // 1. Identity Verification via Profiles Table
                 const { data: profile, error: queryError } = await _supabase
                     .from('profiles') 
                     .select('id')
@@ -104,15 +103,13 @@
                 if (queryError) throw queryError;
                 if (!profile) throw new Error("Account details do not match our records.");
 
-                // 2. Send Reset Link (Using Supabase Default Emailer)
                 resetBtn.innerText = "Sending Link...";
                 const { error: resetError } = await _supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: window.location.origin + '/pass.html',
+                    redirectTo: 'https://orezimeokelezo.github.io/Campus-hub/pass.html',
                     captchaToken: captchaResponse 
                 });
 
                 if (resetError) {
-                    // Specific handling for the 3-emails-per-hour limit
                     if (resetError.status === 429) {
                         throw new Error("Rate limit exceeded. Supabase default mailer only allows 3 emails per hour.");
                     }
