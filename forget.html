@@ -34,7 +34,7 @@
 
                     <div id="statusBox" style="display:none; font-size:0.85rem; margin-bottom:10px; padding:10px; border-radius:5px;"></div>
 
-                    <a href="login.html" class="forgot-link">Remembered Password?</a>
+                    <a href="sign.html" class="forgot-link">Remembered Password?</a>
 
                     <button type="submit" class="login-btn" id="resetBtn">Request Link</button>
                 </form>
@@ -79,7 +79,6 @@
         resetForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // 1. CAPTCHA VERIFICATION
             const captchaResponse = grecaptcha.getResponse();
             if (captchaResponse.length === 0) {
                 updateStatus("Please complete the CAPTCHA first.");
@@ -94,35 +93,38 @@
             statusBox.style.display = "none";
 
             try {
-                // 2. CHECK DATABASE FOR ACCOUNT (Verify profiles table)
+                // 1. Identity Verification via Profiles Table
                 const { data: profile, error: queryError } = await _supabase
                     .from('profiles') 
-                    .select('email')
+                    .select('id')
                     .eq('email', email)
                     .eq('matric_no', matric)
                     .maybeSingle();
 
                 if (queryError) throw queryError;
+                if (!profile) throw new Error("Account details do not match our records.");
 
-                if (!profile) {
-                    throw new Error("Account details do not match our records.");
-                }
-
-                // 3. SEND RESET LINK
+                // 2. Send Reset Link (Using Supabase Default Emailer)
                 resetBtn.innerText = "Sending Link...";
                 const { error: resetError } = await _supabase.auth.resetPasswordForEmail(email, {
-                    // This must match your password reset file name
                     redirectTo: window.location.origin + '/pass.html',
                     captchaToken: captchaResponse 
                 });
 
-                if (resetError) throw resetError;
+                if (resetError) {
+                    // Specific handling for the 3-emails-per-hour limit
+                    if (resetError.status === 429) {
+                        throw new Error("Rate limit exceeded. Supabase default mailer only allows 3 emails per hour.");
+                    }
+                    throw resetError;
+                }
 
-                updateStatus("Verification successful! Check your email.", false);
+                updateStatus("Check your inbox! The reset link has been sent.", false);
                 resetBtn.innerText = "Sent ✅";
 
             } catch (err) {
-                updateStatus(err.message);
+                console.error("Auth Error:", err);
+                updateStatus(err.message || "An error occurred. Please try again.");
                 resetBtn.innerText = "Request Link";
                 resetBtn.disabled = false;
                 grecaptcha.reset(); 
