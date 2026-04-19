@@ -5,92 +5,115 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Student Connect</title>
     <link rel="stylesheet" href="css/setting.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        /* Drawer-specific styles removed */
-        
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #4caf50;
-            color: #fff; text-align: center; border-radius: 8px;
-            padding: 16px; position: fixed; z-index: 6000;
-            left: 50%; bottom: 30px; transform: translateX(-50%);
-            font-size: 0.9rem; font-weight: 600;
-        }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-
-        .modal { 
-            display: none; position: fixed; z-index: 5000; 
-            left: 0; top: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); justify-content: center; align-items: center; 
-        }
-        .modal.show { display: flex; }
-        .modal-content { 
-            background: #1a1a1a; padding: 25px; border-radius: 15px; 
-            width: 90%; max-width: 400px; border: 1px solid #2a2a2a; color: white;
-            max-height: 90vh; overflow-y: auto;
-        }
-        .modal-content input, .modal-content textarea { 
-            width: 100%; padding: 12px; margin-bottom: 15px; 
-            background: #252525; border: 1px solid #333; 
-            border-radius: 8px; color: white; box-sizing: border-box; font-family: inherit;
-        }
-        
-        .save-btn { background: #a881ff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; }
-        .cancel-btn { background: transparent; color: #888; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 5px; }
-        .logout-confirm-btn { background: #ff5e5e; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; }
-        .header-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
-        .input-label { font-size: 0.75rem; color: #a881ff; margin-bottom: 4px; display: block; font-weight: 600; }
-    </style>
 </head>
 <body>
 
-    <div id="toast">Profile updated successfully!</div>
+    <div id="toast" class="toast-message">Profile updated successfully!</div>
 
+    <!-- Edit Profile Modal -->
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <h3>Update Profile</h3>
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-pen"></i> Edit Profile</h3>
+                <button class="modal-close" onclick="closeAllModals()">&times;</button>
+            </div>
             
-            <label class="input-label">Full Name</label>
-            <input type="text" id="newName" placeholder="Full Name">
-            
-            <label class="input-label">Matric Number</label>
-            <input type="text" id="newMatric" placeholder="e.g. UG/2024/1234">
+            <div class="avatar-upload-section">
+                <img id="previewAvatar" class="preview-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                <label for="avatarFile" class="upload-label">
+                    <i class="fa-solid fa-camera"></i> Change Photo
+                </label>
+                <input type="file" id="avatarFile" accept="image/*" style="display: none;">
+            </div>
 
-            <label class="input-label">Admission Year</label>
-            <input type="number" id="newYear" placeholder="e.g. 2024">
+            <div class="form-group">
+                <label class="input-label"><i class="fa-regular fa-user"></i> Full Name</label>
+                <input type="text" id="newName" placeholder="Your full name">
+            </div>
             
-            <label class="input-label">Bio</label>
-            <textarea id="newBio" placeholder="Tell the community about yourself..." style="height: 80px; resize: none;"></textarea>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="input-label"><i class="fa-solid fa-id-card"></i> Matric Number</label>
+                    <input type="text" id="newMatric" placeholder="e.g., UG/2024/1234">
+                </div>
+                <div class="form-group">
+                    <label class="input-label"><i class="fa-regular fa-calendar"></i> Admission Year</label>
+                    <input type="number" id="newYear" placeholder="e.g., 2024">
+                </div>
+            </div>
             
-            <label class="input-label">Profile Picture</label>
-            <input type="file" id="avatarFile" accept="image/*">
+            <div class="form-group">
+                <label class="input-label"><i class="fa-regular fa-message"></i> Bio</label>
+                <textarea id="newBio" placeholder="Tell the community about yourself..." rows="3"></textarea>
+            </div>
             
             <button class="save-btn" id="saveProfileBtn">Save Changes</button>
             <button class="cancel-btn" onclick="closeAllModals()">Cancel</button>
         </div>
     </div>
 
+    <!-- Change Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-key"></i> Change Password</h3>
+                <button class="modal-close" onclick="closePasswordModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="input-label">Current Password</label>
+                <input type="password" id="currentPassword" placeholder="Enter current password">
+            </div>
+            <div class="form-group">
+                <label class="input-label">New Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password (min. 6 characters)">
+            </div>
+            <div class="form-group">
+                <label class="input-label">Confirm New Password</label>
+                <input type="password" id="confirmPassword" placeholder="Confirm new password">
+            </div>
+            
+            <button class="save-btn" id="changePasswordBtn">Update Password</button>
+            <button class="cancel-btn" onclick="closePasswordModal()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content delete-modal">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <h3>Delete Account</h3>
+            <p>This action cannot be undone. All your posts, comments, and data will be permanently deleted.</p>
+            <div class="form-group">
+                <label class="input-label">Type "DELETE" to confirm</label>
+                <input type="text" id="deleteConfirm" placeholder="Type DELETE">
+            </div>
+            <button class="delete-confirm-btn" id="confirmDeleteBtn">Permanently Delete Account</button>
+            <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
     <div id="logoutModal" class="modal">
-        <div class="modal-content" style="text-align: center;">
-            <i class="fa-solid fa-right-from-bracket" style="font-size: 2rem; color: #ff5e5e; margin-bottom: 15px;"></i>
+        <div class="modal-content logout-modal">
+            <i class="fa-solid fa-right-from-bracket"></i>
             <h3>Logout?</h3>
-            <p style="color: #888; margin-bottom: 20px;">Are you sure you want to log out of your account?</p>
-            <button class="logout-confirm-btn" id="confirmLogout">Yes, Logout</button>
-            <button class="cancel-btn" onclick="closeAllModals()">Cancel</button>
+            <p>Are you sure you want to log out of your account?</p>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeAllModals()">Cancel</button>
+                <button class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
         </div>
     </div>
 
     <header class="top-nav">
         <div class="nav-left">
-            <a href="home.html" style="color:white;"><i class="fa-solid fa-arrow-left"></i></a>
-            <h2 style="margin-left: 15px;">Settings</h2>
+            <a href="home.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i></a>
+            <h2>Settings</h2>
         </div>
-        <div class="nav-right"></div>
     </header>
 
     <div class="app-layout">
@@ -98,40 +121,68 @@
             <div class="user-profile-header">
                 <div class="profile-text">
                     <h1 id="displayUsername">Loading...</h1>
-                    <p id="displayMatric" style="color: #888; font-size: 0.9rem; margin-top: -5px;"></p>
-                    <a href="#" class="edit-link" id="openEdit">Edit name, bio & avatar</a>
+                    <p id="displayMatric" class="matric-text"></p>
+                    <p id="displayBio" class="bio-text"></p>
+                    <button class="edit-profile-btn" id="openEdit">
+                        <i class="fa-regular fa-pen-to-square"></i> Edit Profile
+                    </button>
                 </div>
                 <img id="displayAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="header-avatar">
             </div>
 
             <div class="settings-list">
-                <div class="settings-item" onclick="goToMyProfile()">
-                    <span>View profile</span>
-                    <i class="fa-solid fa-user"></i>
+                <div class="settings-section">
+                    <div class="section-title">Account</div>
+                    <div class="settings-item" onclick="goToMyProfile()">
+                        <span><i class="fa-regular fa-user"></i> View my profile</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div class="settings-item" onclick="openPasswordModal()">
+                        <span><i class="fa-solid fa-key"></i> Change password</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div class="settings-item" onclick="window.location.href='notice.html'">
+                        <span><i class="fa-regular fa-bell"></i> Notifications</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
                 </div>
-                <div class="settings-item" onclick="window.location.href='notice.html'">
-                    <span>Notifications</span>
-                    <i class="fa-solid fa-bell"></i>
+
+                <div class="settings-section">
+                    <div class="section-title">Security & Privacy</div>
+                    <div class="settings-item" onclick="window.location.href='private.html'">
+                        <span><i class="fa-solid fa-lock"></i> Privacy policy</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div class="settings-item" onclick="window.location.href='terms.html'">
+                        <span><i class="fa-solid fa-file-contract"></i> Terms of service</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
                 </div>
-                <div class="settings-item">
-                    <span>Account Security</span>
-                    <i class="fa-solid fa-shield-halved"></i>
+
+                <div class="settings-section">
+                    <div class="section-title">About</div>
+                    <div class="settings-item" onclick="window.location.href='about.html'">
+                        <span><i class="fa-solid fa-circle-info"></i> About Student Connect</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div class="settings-item" onclick="window.location.href='feedback.html'">
+                        <span><i class="fa-regular fa-comment"></i> Send feedback</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div class="settings-item" id="versionInfo">
+                        <span><i class="fa-solid fa-code-branch"></i> Version</span>
+                        <span class="version-number">2.0.0</span>
+                    </div>
                 </div>
-                <div class="settings-item" onclick="window.location.href='terms.html'">
-                    <span>Terms of service</span>
-                    <i class="fa-solid fa-file-contract"></i>
+
+                <div class="settings-item danger-item" id="logoutTrigger">
+                    <span><i class="fa-solid fa-right-from-bracket"></i> Log out</span>
+                    <i class="fa-solid fa-chevron-right"></i>
                 </div>
-                <div class="settings-item" onclick="window.location.href='private.html'">
-                    <span>Privacy policy</span>
-                    <i class="fa-solid fa-lock"></i>
-                </div>
-                <div class="settings-item" onclick="window.location.href='about.html'">
-                    <span>About</span>
-                    <i class="fa-solid fa-circle-info"></i>
-                </div>
-                <div class="settings-item" id="logoutTrigger" style="color: #ff5e5e; border-bottom: none;">
-                    <span>Log out</span>
-                    <i class="fa-solid fa-right-from-bracket"></i>
+
+                <div class="settings-item danger-item" id="deleteAccountTrigger">
+                    <span><i class="fa-solid fa-trash-can"></i> Delete account</span>
+                    <i class="fa-solid fa-chevron-right"></i>
                 </div>
             </div>
         </main>
@@ -156,17 +207,31 @@
 
             const name = currentProfileData.full_name || user.user_metadata?.full_name || "Student";
             const avatar = currentProfileData.avatar_url || user.user_metadata?.avatar_url || DEFAULT_AVATAR;
-            const matric = currentProfileData.matric_no || "No Matric No.";
+            const matric = currentProfileData.matric_no || "No matric number set";
+            const bio = currentProfileData.bio || "No bio yet";
 
             document.getElementById("displayUsername").innerText = name;
             document.getElementById("displayAvatar").src = avatar;
-            document.getElementById("displayMatric").innerText = matric;
+            document.getElementById("displayMatric").innerHTML = `<i class="fa-solid fa-id-card"></i> ${matric}`;
+            document.getElementById("displayBio").innerHTML = `<i class="fa-regular fa-message"></i> ${bio}`;
             
             document.getElementById("newName").value = name;
             document.getElementById("newBio").value = currentProfileData.bio || "";
             document.getElementById("newMatric").value = currentProfileData.matric_no || "";
             document.getElementById("newYear").value = currentProfileData.admission_year || "";
         }
+
+        // Avatar preview
+        document.getElementById('avatarFile').onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('previewAvatar').src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
 
         async function handleSave() {
             const btn = document.getElementById("saveProfileBtn");
@@ -176,8 +241,8 @@
             const year = document.getElementById("newYear").value;
             const file = document.getElementById("avatarFile").files[0];
 
-            if(!name) return alert("Name is required");
-            btn.innerText = "Saving...";
+            if(!name) return showToast("Name is required", "error");
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
             btn.disabled = true;
 
             try {
@@ -185,7 +250,10 @@
 
                 if (file) {
                     const fileName = `${currentUser.id}-${Date.now()}.jpg`;
-                    await supa.storage.from('post_images').upload(`avatars/${fileName}`, file);
+                    const { error: uploadError } = await supa.storage
+                        .from('post_images')
+                        .upload(`avatars/${fileName}`, file);
+                    if (uploadError) throw uploadError;
                     avatarUrl = supa.storage.from('post_images').getPublicUrl(`avatars/${fileName}`).data.publicUrl;
                 }
 
@@ -204,46 +272,121 @@
                 });
 
                 closeAllModals();
-                showToast();
+                showToast("Profile updated successfully!", "success");
                 setTimeout(() => location.reload(), 1500); 
             } catch (err) {
-                alert(err.message);
-                btn.innerText = "Save Changes";
+                showToast(err.message, "error");
+                btn.innerHTML = 'Save Changes';
                 btn.disabled = false;
+            }
+        }
+
+        async function changePassword() {
+            const currentPwd = document.getElementById('currentPassword').value;
+            const newPwd = document.getElementById('newPassword').value;
+            const confirmPwd = document.getElementById('confirmPassword').value;
+
+            if (!currentPwd || !newPwd || !confirmPwd) {
+                showToast("Please fill in all fields", "error");
+                return;
+            }
+
+            if (newPwd !== confirmPwd) {
+                showToast("New passwords do not match", "error");
+                return;
+            }
+
+            if (newPwd.length < 6) {
+                showToast("Password must be at least 6 characters", "error");
+                return;
+            }
+
+            try {
+                const { error } = await supa.auth.updateUser({ password: newPwd });
+                if (error) throw error;
+                
+                showToast("Password updated successfully!", "success");
+                closePasswordModal();
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function deleteAccount() {
+            const confirmText = document.getElementById('deleteConfirm').value;
+            if (confirmText !== 'DELETE') {
+                showToast('Type "DELETE" to confirm account deletion', "error");
+                return;
+            }
+
+            if (!confirm("WARNING: This will permanently delete all your data. Are you absolutely sure?")) return;
+
+            try {
+                // Delete user's posts, comments, likes, etc.
+                await supa.from('posts').delete().eq('uid', currentUser.id);
+                await supa.from('comments').delete().eq('uid', currentUser.id);
+                await supa.from('likes').delete().eq('uid', currentUser.id);
+                await supa.from('dislikes').delete().eq('uid', currentUser.id);
+                await supa.from('profiles').delete().eq('id', currentUser.id);
+                
+                // Sign out
+                await supa.auth.signOut();
+                window.location.href = "sign.html";
+            } catch (err) {
+                showToast("Error deleting account. Please contact support.", "error");
             }
         }
 
         function goToMyProfile() {
             if (currentUser) {
-                localStorage.setItem("viewProfileUid", currentUser.id);
-                window.location.href = `profile.html`;
+                window.location.href = `profile.html?uid=${currentUser.id}`;
             }
         }
 
-        function showToast() {
-            const x = document.getElementById("toast");
-            x.className = "show";
-            setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.className = `toast-message ${type}`;
+            setTimeout(() => { toast.className = 'toast-message'; }, 3000);
         }
 
         function closeAllModals() { 
             document.getElementById("editModal").classList.remove("show"); 
             document.getElementById("logoutModal").classList.remove("show"); 
+            document.getElementById("deleteModal").classList.remove("show");
+            document.body.style.overflow = '';
         }
 
-        // Open Edit Profile
-        document.getElementById("openEdit").onclick = () => document.getElementById("editModal").classList.add("show");
+        function openPasswordModal() {
+            document.getElementById("passwordModal").classList.add("show");
+        }
+
+        function closePasswordModal() {
+            document.getElementById("passwordModal").classList.remove("show");
+        }
+
+        function closeDeleteModal() {
+            document.getElementById("deleteModal").classList.remove("show");
+        }
+
+        // Event listeners
+        document.getElementById("openEdit").onclick = () => {
+            document.getElementById("editModal").classList.add("show");
+            document.getElementById("previewAvatar").src = document.getElementById("displayAvatar").src;
+        };
         
-        // Open Logout Modal
         document.getElementById("logoutTrigger").onclick = () => document.getElementById("logoutModal").classList.add("show");
-
+        document.getElementById("deleteAccountTrigger").onclick = () => document.getElementById("deleteModal").classList.add("show");
         document.getElementById("saveProfileBtn").onclick = handleSave;
-
-        // Confirm Logout Logic
+        document.getElementById("changePasswordBtn").onclick = changePassword;
         document.getElementById("confirmLogout").onclick = async () => { 
             await supa.auth.signOut(); 
             window.location.href = "sign.html"; 
         };
+        document.getElementById("confirmDeleteBtn").onclick = deleteAccount;
 
         window.onload = init;
     </script>

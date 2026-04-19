@@ -64,19 +64,11 @@ const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-// =======================
-// INIT
-// =======================
 async function init() {
     try {
         const { data: { user } } = await supa.auth.getUser();
+        if (!user) { window.location.href = "sign.html"; return; }
 
-        if (!user) {
-            window.location.href = "sign.html";
-            return;
-        }
-
-        // Setup Sidebar & Greeting
         const meta = user.user_metadata || {};
         const name = meta.full_name || "Student";
 
@@ -84,28 +76,33 @@ async function init() {
         document.getElementById("sideName").innerText = name;
         document.getElementById("sideEmail").innerText = user.email;
         document.getElementById("sideAvatar").src = meta.avatar_url || DEFAULT_AVATAR;
-
-        // Dynamic Link for My post
         document.getElementById("myPostLink").href = `profile.html?uid=${user.id}`;
 
         loadPosts();
-
-    } catch (err) {
-        console.error("Init error:", err);
-    }
+    } catch (err) { console.error("Init error:", err); }
 }
 
-// =======================
-// LOAD POSTS (Using Optimized SQL View)
-// =======================
 async function loadPosts() {
     const container = document.getElementById("feedContainer");
 
-    // Load Cache
+    // Check Cache first
     const cached = sessionStorage.getItem("cached_feed");
-    if (cached) renderPosts(JSON.parse(cached));
+    if (cached) {
+        renderPosts(JSON.parse(cached));
+    } else {
+        // Show Shimmer if no cache
+        container.innerHTML = `
+            <div class="shimmer-wrapper">
+                <div class="skeleton-avatar shimmer"></div>
+                <div class="skeleton-body">
+                    <div class="skeleton-title shimmer"></div>
+                    <div class="skeleton-text shimmer"></div>
+                    <div class="skeleton-text short shimmer"></div>
+                </div>
+            </div>
+        `.repeat(4);
+    }
 
-    // Query the VIEW instead of the TABLE to get everything in one request
     const { data: posts, error } = await supa
         .from("posts_with_counts")
         .select("*")
@@ -113,11 +110,10 @@ async function loadPosts() {
 
     if (error) {
         console.error("Fetch error:", error);
-        if (!cached) container.innerHTML = `<div class="feed-status">Failed to load posts</div>`;
+        container.innerHTML = `<div class="feed-status">Failed to load posts</div>`;
         return;
     }
 
-    // Map View column names to the variables used in renderPosts
     const finalPosts = posts.map(post => ({
         ...post,
         name: post.full_name || "Anonymous",
@@ -134,9 +130,6 @@ async function loadPosts() {
     }
 }
 
-// =======================
-// RENDER
-// =======================
 function renderPosts(posts) {
     const container = document.getElementById("feedContainer");
     if (!posts || posts.length === 0) {
@@ -145,11 +138,9 @@ function renderPosts(posts) {
     }
 
     const fragment = document.createDocumentFragment();
-
     posts.forEach(post => {
         const images = [post.img1, post.img2, post.img3, post.img4].filter(Boolean);
         const gridClass = images.length > 1 ? `grid-${images.length}` : "";
-
         const div = document.createElement("div");
         div.className = "post";
         div.onclick = () => {
@@ -180,14 +171,10 @@ function renderPosts(posts) {
         `;
         fragment.appendChild(div);
     });
-
     container.innerHTML = "";
     container.appendChild(fragment);
 }
 
-// =======================
-// HELPERS & UI
-// =======================
 function timeAgo(date) {
     if (!date) return "Just now";
     const diff = Math.floor((new Date() - new Date(date)) / 60000);
@@ -203,7 +190,6 @@ const modal = document.getElementById("logoutModal");
 
 menuToggle.onclick = e => { e.stopPropagation(); panel.classList.toggle("active"); };
 document.onclick = e => { if (!panel.contains(e.target) && !menuToggle.contains(e.target)) panel.classList.remove("active"); };
-
 document.getElementById("logoutTrigger").onclick = e => { e.preventDefault(); modal.classList.add("show"); };
 document.getElementById("cancelLogout").onclick = () => modal.classList.remove("show");
 document.getElementById("confirmLogout").onclick = async () => {

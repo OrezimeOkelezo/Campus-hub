@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search - Student Connect</title>
     <link rel="stylesheet" href="css/search.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -16,23 +16,44 @@
             <a href="home.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i></a>
             <div class="input-wrapper">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" placeholder="Let's find" id="searchInput" autocomplete="off">
+                <input type="text" placeholder="Search posts, people, or matric numbers..." id="searchInput" autocomplete="off">
+                <i class="fa-solid fa-xmark clear-search" id="clearSearch" style="display: none;"></i>
             </div>
             <button class="filter-toggle" id="filterBtn"><i class="fa-solid fa-sliders"></i></button>
         </div>
         <div class="filter-row" id="filterRow">
-            <div class="chip active" data-type="posts">Post</div>
-            <div class="chip" data-type="people">People</div>
-            <div class="chip" data-type="matric">Matric</div>
+            <div class="chip active" data-type="posts">
+                <i class="fa-regular fa-newspaper"></i> Posts
+            </div>
+            <div class="chip" data-type="people">
+                <i class="fa-regular fa-user"></i> People
+            </div>
+            <div class="chip" data-type="matric">
+                <i class="fa-solid fa-id-card"></i> Matric No.
+            </div>
         </div>
     </header>
 
     <main id="resultsArea">
         <div class="empty-state">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <p>Search for posts, friends, or matric numbers</p>
+            <h3>Search Anything</h3>
+            <p>Find posts, connect with students, or search by matric number</p>
+            <div class="suggestions">
+                <span class="suggestion-chip" data-search="study tips">Study tips</span>
+                <span class="suggestion-chip" data-search="exam">Exam help</span>
+                <span class="suggestion-chip" data-search="project">Project ideas</span>
+            </div>
         </div>
     </main>
+
+    <div class="recent-searches" id="recentSearches" style="display: none;">
+        <div class="recent-header">
+            <span><i class="fa-regular fa-clock"></i> Recent Searches</span>
+            <button id="clearRecent" class="clear-btn">Clear all</button>
+        </div>
+        <div id="recentList"></div>
+    </div>
 
     <script>
         const SUPABASE_URL = 'https://nwhskxqwtpkuiwkcdols.supabase.co';
@@ -44,9 +65,88 @@
         const chips = document.querySelectorAll('.chip');
         const searchInput = document.getElementById('searchInput');
         const resultsArea = document.getElementById('resultsArea');
+        const clearSearch = document.getElementById('clearSearch');
+        const recentSearchesDiv = document.getElementById('recentSearches');
+        const recentList = document.getElementById('recentList');
+        const clearRecentBtn = document.getElementById('clearRecent');
 
         let searchTimeout;
         let currentFilter = 'posts';
+        let currentUser = null;
+
+        // Recent searches management
+        function getRecentSearches() {
+            const recent = localStorage.getItem('recent_searches');
+            return recent ? JSON.parse(recent) : [];
+        }
+
+        function saveRecentSearch(query) {
+            if (!query.trim()) return;
+            let recent = getRecentSearches();
+            recent = recent.filter(s => s !== query);
+            recent.unshift(query);
+            if (recent.length > 5) recent.pop();
+            localStorage.setItem('recent_searches', JSON.stringify(recent));
+            displayRecentSearches();
+        }
+
+        function displayRecentSearches() {
+            const recent = getRecentSearches();
+            if (recent.length > 0) {
+                recentSearchesDiv.style.display = 'block';
+                recentList.innerHTML = recent.map(s => `
+                    <div class="recent-item" onclick="searchQuery('${s.replace(/'/g, "\\'")}')">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>${escapeHtml(s)}</span>
+                        <i class="fa-solid fa-xmark delete-recent" data-search="${s}"></i>
+                    </div>
+                `).join('');
+                
+                // Add delete functionality
+                document.querySelectorAll('.delete-recent').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const searchTerm = btn.getAttribute('data-search');
+                        let recent = getRecentSearches();
+                        recent = recent.filter(s => s !== searchTerm);
+                        localStorage.setItem('recent_searches', JSON.stringify(recent));
+                        displayRecentSearches();
+                        if (recent.length === 0) recentSearchesDiv.style.display = 'none';
+                    };
+                });
+            } else {
+                recentSearchesDiv.style.display = 'none';
+            }
+        }
+
+        function searchQuery(query) {
+            searchInput.value = query;
+            performSearch();
+        }
+
+        clearRecentBtn.onclick = () => {
+            localStorage.removeItem('recent_searches');
+            recentSearchesDiv.style.display = 'none';
+        };
+
+        // Initialize
+        async function init() {
+            const { data: { user } } = await supa.auth.getUser();
+            if (!user) {
+                window.location.href = "sign.html";
+                return;
+            }
+            currentUser = user;
+            displayRecentSearches();
+            
+            // Add suggestion clicks
+            document.querySelectorAll('.suggestion-chip').forEach(chip => {
+                chip.onclick = () => {
+                    searchInput.value = chip.getAttribute('data-search');
+                    performSearch();
+                };
+            });
+        }
 
         filterBtn.onclick = () => {
             filterRow.classList.toggle('visible');
@@ -63,31 +163,56 @@
         });
 
         searchInput.oninput = () => {
+            clearSearch.style.display = searchInput.value ? 'flex' : 'none';
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(performSearch, 400);
+        };
+
+        clearSearch.onclick = () => {
+            searchInput.value = '';
+            clearSearch.style.display = 'none';
+            resultsArea.innerHTML = `<div class="empty-state">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <h3>Search Anything</h3>
+                <p>Find posts, connect with students, or search by matric number</p>
+                <div class="suggestions">
+                    <span class="suggestion-chip" data-search="study tips">Study tips</span>
+                    <span class="suggestion-chip" data-search="exam">Exam help</span>
+                    <span class="suggestion-chip" data-search="project">Project ideas</span>
+                </div>
+            </div>`;
+            recentSearchesDiv.style.display = getRecentSearches().length > 0 ? 'block' : 'none';
         };
 
         async function performSearch() {
             const query = searchInput.value.trim();
             if (!query) {
-                resultsArea.innerHTML = `<div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i><p>Search for posts, friends, or matric numbers</p></div>`;
+                resultsArea.innerHTML = `<div class="empty-state">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <h3>Search Anything</h3>
+                    <p>Find posts, connect with students, or search by matric number</p>
+                    <div class="suggestions">
+                        <span class="suggestion-chip" data-search="study tips">Study tips</span>
+                        <span class="suggestion-chip" data-search="exam">Exam help</span>
+                        <span class="suggestion-chip" data-search="project">Project ideas</span>
+                    </div>
+                </div>`;
                 return;
             }
 
-            resultsArea.innerHTML = `<div class="empty-state"><p><i class="fas fa-spinner fa-spin"></i> Searching...</p></div>`;
+            saveRecentSearch(query);
+            resultsArea.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>Searching for "${escapeHtml(query)}"...</p></div>`;
 
             try {
                 if (currentFilter === 'posts') {
-                    // Fetch matching posts
                     const { data: posts, error } = await supa.from('posts')
                         .select(`*, profiles:uid(full_name, avatar_url)`)
                         .ilike('text', `%${query}%`)
                         .order('created_at', { ascending: false })
-                        .limit(15);
+                        .limit(30);
 
                     if (error) throw error;
 
-                    // Fetch exact interaction counts for each post
                     const postsWithCounts = await Promise.all(
                         posts.map(async (post) => {
                             const [likes, dislikes, comments] = await Promise.all([
@@ -95,7 +220,6 @@
                                 supa.from("dislikes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
                                 supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", post.id)
                             ]);
-
                             return {
                                 ...post,
                                 lCount: likes.count || 0,
@@ -104,77 +228,130 @@
                             };
                         })
                     );
-                    renderPosts(postsWithCounts);
+                    renderPosts(postsWithCounts, query);
 
                 } else if (currentFilter === 'people') {
                     const { data } = await supa.from('profiles')
-                        .select('*').ilike('full_name', `%${query}%`).limit(15);
-                    renderUsers(data, false);
+                        .select('*')
+                        .ilike('full_name', `%${query}%`)
+                        .limit(20);
+                    renderUsers(data, false, query);
                 } else if (currentFilter === 'matric') {
                     const { data } = await supa.from('profiles')
-                        .select('*').ilike('matric_no', `%${query}%`).limit(15);
-                    renderUsers(data, true);
+                        .select('*')
+                        .ilike('matric_no', `%${query}%`)
+                        .limit(20);
+                    renderUsers(data, true, query);
                 }
             } catch (err) {
                 console.error("Search error:", err);
-                resultsArea.innerHTML = `<p style="color:red; text-align:center; padding:20px;">Error loading results. Check your connection.</p>`;
+                resultsArea.innerHTML = `<div class="error-state"><i class="fa-solid fa-circle-exclamation"></i><p>Error loading results. Please try again.</p><button onclick="performSearch()" class="retry-btn">Retry</button></div>`;
             }
         }
 
-        function renderPosts(posts) {
+        function renderPosts(posts, query) {
             if (!posts?.length) {
-                resultsArea.innerHTML = `<div class="empty-state"><p>No posts found for "${searchInput.value}"</p></div>`;
+                resultsArea.innerHTML = `<div class="empty-state"><i class="fa-regular fa-newspaper"></i><h3>No posts found</h3><p>No results for "${escapeHtml(query)}"</p><div class="suggestions"><span class="suggestion-chip" data-search="study tips">Study tips</span><span class="suggestion-chip" data-search="exam">Exam help</span></div></div>`;
+                document.querySelectorAll('.suggestion-chip').forEach(chip => {
+                    chip.onclick = () => {
+                        searchInput.value = chip.getAttribute('data-search');
+                        performSearch();
+                    };
+                });
                 return;
             }
             
-            resultsArea.innerHTML = posts.map(p => {
-                const imgs = [p.img1, p.img2, p.img3, p.img4].filter(Boolean);
-                const gridClass = imgs.length > 0 ? `search-grid grid-${imgs.length}` : '';
-                
-                return `
-                    <div class="search-item-post" onclick="openPost('${p.id}')">
-                        <div class="post-header">
-                            <img src="${p.profiles?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
-                            <div class="post-user-info">
-                                <span class="post-author-name">${p.profiles?.full_name || 'Anonymous Student'}</span>
-                                <span class="post-date">${new Date(p.created_at).toLocaleDateString()}</span>
+            resultsArea.innerHTML = `<div class="results-header"><i class="fa-regular fa-newspaper"></i> Found ${posts.length} post${posts.length !== 1 ? 's' : ''}</div>` + 
+                posts.map(p => {
+                    const imgs = [p.img1, p.img2, p.img3, p.img4].filter(Boolean);
+                    const gridClass = imgs.length > 0 ? `search-grid grid-${Math.min(imgs.length, 4)}` : '';
+                    const timeAgo = getTimeAgo(p.created_at);
+                    
+                    return `
+                        <div class="search-item-post" onclick="openPost(${p.id})">
+                            <div class="post-header">
+                                <img src="${p.profiles?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                                <div class="post-user-info">
+                                    <span class="post-author-name">${escapeHtml(p.profiles?.full_name || 'Anonymous Student')}</span>
+                                    <span class="post-date"><i class="fa-regular fa-calendar"></i> ${timeAgo}</span>
+                                </div>
+                            </div>
+                            <div class="post-text">${escapeHtml(p.text || '').substring(0, 200)}${p.text?.length > 200 ? '...' : ''}</div>
+                            ${imgs.length > 0 ? `<div class="${gridClass}">${imgs.map(src => `<img src="${src}" loading="lazy" onclick="event.stopPropagation(); openImage('${src}')">`).join('')}</div>` : ''}
+                            <div class="post-actions">
+                                <div class="action-item"><i class="fa-regular fa-thumbs-up"></i> <span>${p.lCount}</span></div>
+                                <div class="action-item"><i class="fa-regular fa-thumbs-down"></i> <span>${p.dCount}</span></div>
+                                <div class="action-item"><i class="fa-regular fa-comment"></i> <span>${p.cCount}</span></div>
+                                <div class="action-item"><i class="fa-regular fa-eye"></i> <span>${p.view || 0}</span></div>
                             </div>
                         </div>
-                        <div class="post-text">${p.text || ''}</div>
-                        ${imgs.length > 0 ? `<div class="${gridClass}">${imgs.map(src => `<img src="${src}" loading="lazy">`).join('')}</div>` : ''}
-                        
-                        <div class="post-actions">
-                            <div class="action-item"><i class="fa-regular fa-thumbs-up"></i> <span>${p.lCount}</span></div>
-                            <div class="action-item"><i class="fa-regular fa-thumbs-down"></i> <span>${p.dCount}</span></div>
-                            <div class="action-item"><i class="fa-regular fa-comment"></i> <span>${p.cCount}</span></div>
-                            <div class="action-item"><i class="fa-regular fa-eye"></i> <span>${p.view || 0}</span></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
         }
 
-        function renderUsers(users, showMatric) {
+        function renderUsers(users, showMatric, query) {
             if (!users?.length) {
-                resultsArea.innerHTML = `<div class="empty-state"><p>No students found matching your search.</p></div>`;
+                resultsArea.innerHTML = `<div class="empty-state"><i class="fa-regular ${showMatric ? 'fa-id-card' : 'fa-user'}"></i><h3>No ${showMatric ? 'matric numbers' : 'people'} found</h3><p>No results for "${escapeHtml(query)}"</p></div>`;
                 return;
             }
             
-            resultsArea.innerHTML = users.map(u => `
-                <div class="search-item-user" onclick="window.location.href='profile.html?uid=${u.id}'">
-                    <img src="${u.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
-                    <div class="user-info">
-                        <h4>${u.full_name}</h4>
-                        ${showMatric ? `<p><i class="fa-solid fa-id-card"></i> ${u.matric_no || 'No Matric No.'}</p>` : `<p>${u.bio || 'Connect Student'}</p>`}
+            resultsArea.innerHTML = `<div class="results-header"><i class="fa-regular fa-user"></i> Found ${users.length} student${users.length !== 1 ? 's' : ''}</div>` +
+                users.map(u => `
+                    <div class="search-item-user" onclick="window.location.href='profile.html?uid=${u.id}'">
+                        <img src="${u.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                        <div class="user-info">
+                            <h4>${escapeHtml(u.full_name)}</h4>
+                            ${showMatric ? `<p class="matric-info"><i class="fa-solid fa-id-card"></i> ${u.matric_no || 'Not set'}</p>` : `<p class="user-bio">${escapeHtml(u.bio || 'Student at Student Connect')}</p>`}
+                            ${!showMatric ? `<p class="user-email"><i class="fa-regular fa-envelope"></i> ${escapeHtml(u.email || '')}</p>` : ''}
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+        }
+
+        function getTimeAgo(date) {
+            if (!date) return 'Just now';
+            const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+            if (seconds < 60) return 'Just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            if (days < 7) return `${days}d ago`;
+            return new Date(date).toLocaleDateString();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
 
         function openPost(id) {
             localStorage.setItem("selectedPost", JSON.stringify({ id }));
             window.location.href = "post.html";
         }
+
+        function openImage(src) {
+            const modal = document.createElement('div');
+            modal.className = 'image-modal';
+            modal.innerHTML = `
+                <div class="image-modal-content">
+                    <span class="close-modal">&times;</span>
+                    <img src="${src}" alt="Full size image">
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+            modal.querySelector('.close-modal').onclick = () => modal.remove();
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
