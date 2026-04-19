@@ -9,6 +9,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* CSS Integration */
+        .nav-header-main { display: flex; align-items: center; gap: 12px; }
+        .back-nav-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; text-decoration: none; transition: background 0.2s; }
+        .back-nav-btn:hover { background: rgba(255, 255, 255, 0.1); }
+        .back-nav-btn i { font-size: 1.2rem; }
+        .page-title { font-size: 1.2rem; font-weight: 600; }
+        .nav-search-mode { flex: 1; margin: 0 10px; }
+        .search-input-wrapper { display: flex; align-items: center; background: #222; padding: 8px 15px; border-radius: 25px; width: 100%; }
+        .search-input-wrapper input { flex: 1; background: transparent; border: none; color: white; outline: none; font-family: inherit; font-size: 0.9rem; }
+        .search-input-wrapper i { color: #777; cursor: pointer; margin-left: 10px; }
+
+        /* Full Width Adjustments */
+        .app-layout { width: 100%; overflow-x: hidden; }
+        .file-list-container { width: 100%; padding: 15px 0; }
+        .file-card {
+            display: flex; align-items: center; padding: 16px;
+            background: #1a1a1a; border-bottom: 1px solid #2a2a2a;
+            cursor: pointer; transition: 0.2s ease; width: 100%; box-sizing: border-box;
+        }
+        .file-card:hover { background: #222; }
+        .file-icon-wrapper { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-right: 15px; flex-shrink: 0; }
+        .file-details { flex: 1; overflow: hidden; }
+        .file-title { display: block; font-weight: 600; font-size: 0.95rem; color: #efefef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-date { font-size: 0.75rem; color: #777; }
+        
+        .download-action-area { width: 30px; text-align: center; color: #444; font-size: 1.2rem; }
+        .loading-spinner { color: #a881ff; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Modal & Toast UI */
+        .uploading-status { display: none; margin-top: 10px; font-size: 0.9rem; color: #448aff; }
+        .uploading-status.active { display: block; }
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #4caf50; color: #fff;
+            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
+            z-index: 6000; bottom: 30px; left: 50%; transform: translateX(-50%);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        .modal { display: none; position: fixed; z-index: 5000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: #1a1a1a; padding: 25px; border-radius: 20px; width: 85%; max-width: 380px; border: 1px solid #333; color: white; text-align: center; }
+        .upload-dropzone { border: 2px dashed #444; padding: 30px; border-radius: 15px; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
+        .upload-dropzone:hover { border-color: #a881ff; background: #222; }
+        .primary-action-btn { background: #a881ff; color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 600; }
+        .secondary-action-btn { background: transparent; color: #888; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 5px; }
+    </style>
 </head>
 <body>
 
@@ -18,35 +68,34 @@
         <div class="modal-content">
             <h3>Upload File</h3>
             <p class="modal-subtitle">PDF, DOCX, or PPTX only</p>
-            
             <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.pptx,.ppt" style="display: none;">
-            
             <div class="upload-dropzone" onclick="document.getElementById('fileInput').click()">
-                <i class="fa-solid fa-file-circle-plus"></i>
+                <i class="fa-solid fa-file-circle-plus" style="font-size: 2.5rem; color: #a881ff; margin-bottom: 10px;"></i>
                 <p id="fileNameDisplay">Tap to select a document</p>
             </div>
-
+            <div id="uploadingIndicator" class="uploading-status">
+                <i class="fa-solid fa-spinner fa-spin"></i> Uploading to server...
+            </div>
             <button class="primary-action-btn" id="confirmUploadBtn">Upload</button>
-            <button class="secondary-action-btn" onclick="closeUploadModal()">Cancel</button>
+            <button class="secondary-action-btn" id="cancelUploadBtn" onclick="closeUploadModal()">Cancel</button>
         </div>
     </div>
 
     <header class="top-nav">
         <div class="header-inner">
             <div class="nav-header-main" id="headerDefault">
-                <a href="home.html" class="back-nav-btn">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </a>
+                <a href="javascript:void(0)" onclick="window.history.back()" class="back-nav-btn">
+    <i class="fa-solid fa-arrow-left"></i>
+</a>
+
                 <h2 class="page-title">Files</h2>
             </div>
-
             <div class="nav-search-mode" id="headerSearch" style="display: none;">
                 <div class="search-input-wrapper">
                     <input type="text" id="fileSearchInput" placeholder="Search files..." oninput="handleSearch()">
                     <i class="fa-solid fa-xmark" onclick="toggleSearch(false)"></i>
                 </div>
             </div>
-
             <div class="nav-right" id="headerActions">
                 <div class="icon-btn" onclick="toggleSearch(true)"><i class="fa-solid fa-magnifying-glass"></i></div>
                 <div class="icon-btn" onclick="openUploadModal()"><i class="fa-solid fa-plus"></i></div>
@@ -87,13 +136,13 @@
             container.innerHTML = files.map(file => {
                 const ext = file.name.split('.').pop().toLowerCase();
                 let iconClass = 'fa-file-pdf';
-                let themeColor = '#ff5e5e'; // Default PDF Red
+                let themeColor = '#ff5e5e';
                 
                 if (['doc', 'docx'].includes(ext)) { iconClass = 'fa-file-word'; themeColor = '#448aff'; }
                 if (['ppt', 'pptx'].includes(ext)) { iconClass = 'fa-file-powerpoint'; themeColor = '#ff9800'; }
 
                 return `
-                    <div class="file-card" onclick="window.open('${file.file_url}', '_blank')">
+                    <div class="file-card" onclick="downloadFile('${file.file_url}', '${file.name}', this)">
                         <div class="file-icon-wrapper" style="background: ${themeColor}15; color: ${themeColor}">
                             <i class="fa-solid ${iconClass}"></i>
                         </div>
@@ -101,24 +150,49 @@
                             <span class="file-title">${file.name}</span>
                             <span class="file-date">${new Date(file.created_at).toLocaleDateString()}</span>
                         </div>
-                        <i class="fa-solid fa-circle-arrow-down download-icon"></i>
+                        <div class="download-action-area">
+                            <i class="fa-solid fa-circle-arrow-down download-icon"></i>
+                        </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // --- Header UI Logic ---
+        async function downloadFile(url, filename, element) {
+            const iconArea = element.querySelector('.download-action-area');
+            const originalContent = iconArea.innerHTML;
+            
+            // Start indicator
+            iconArea.innerHTML = '<i class="fa-solid fa-spinner loading-spinner"></i>';
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Download failed');
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.setAttribute('download', filename);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(blobUrl);
+                showToast("Download started...");
+            } catch (err) {
+                alert("Could not download file: " + err.message);
+            } finally {
+                // Restore icon
+                iconArea.innerHTML = originalContent;
+            }
+        }
+
         function toggleSearch(active) {
             document.getElementById('headerDefault').style.display = active ? 'none' : 'flex';
             document.getElementById('headerActions').style.display = active ? 'none' : 'flex';
             document.getElementById('headerSearch').style.display = active ? 'flex' : 'none';
-            if(active) {
-                const input = document.getElementById('fileSearchInput');
-                input.focus();
-            } else {
-                document.getElementById('fileSearchInput').value = "";
-                renderFiles(allFiles);
-            }
+            if(active) { document.getElementById('fileSearchInput').focus(); } 
+            else { document.getElementById('fileSearchInput').value = ""; renderFiles(allFiles); }
         }
 
         function handleSearch() {
@@ -127,9 +201,12 @@
             renderFiles(filtered);
         }
 
-        // --- Upload Logic ---
         function openUploadModal() { document.getElementById("uploadModal").classList.add("show"); }
-        function closeUploadModal() { document.getElementById("uploadModal").classList.remove("show"); }
+        function closeUploadModal() { 
+            document.getElementById("uploadModal").classList.remove("show");
+            document.getElementById('fileNameDisplay').innerText = "Tap to select a document";
+            document.getElementById('fileInput').value = "";
+        }
 
         document.getElementById('fileInput').onchange = function() {
             if(this.files[0]) document.getElementById('fileNameDisplay').innerText = this.files[0].name;
@@ -137,35 +214,46 @@
 
         document.getElementById('confirmUploadBtn').onclick = async () => {
             const file = document.getElementById('fileInput').files[0];
-            if(!file) return alert("Select a file first");
-
             const btn = document.getElementById('confirmUploadBtn');
-            btn.innerText = "Processing...";
-            btn.disabled = true;
+            const cancelBtn = document.getElementById('cancelUploadBtn');
+            const indicator = document.getElementById('uploadingIndicator');
+
+            if(!file) return alert("Select a file first");
 
             try {
                 const { data: { user } } = await supa.auth.getUser();
-                const path = `user_files/${Date.now()}_${file.name}`;
+                if (!user) throw new Error("Authentication required.");
+
+                btn.innerText = "Processing...";
+                btn.disabled = true;
+                cancelBtn.style.display = "none";
+                indicator.classList.add('active');
+
+                const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                const path = `user_files/${Date.now()}_${cleanName}`;
                 
                 const { error: uploadError } = await supa.storage.from('post_images').upload(path, file);
                 if (uploadError) throw uploadError;
 
                 const { data: { publicUrl } } = supa.storage.from('post_images').getPublicUrl(path);
 
-                await supa.from('files_table').insert([{
+                const { error: dbError } = await supa.from('files_table').insert([{
                     name: file.name,
                     file_url: publicUrl,
                     owner_id: user.id
                 }]);
+                if (dbError) throw dbError;
 
                 showToast("File uploaded successfully!");
                 closeUploadModal();
                 fetchFiles();
             } catch (err) {
-                alert(err.message);
+                alert("Upload failed: " + err.message);
             } finally {
                 btn.innerText = "Upload";
                 btn.disabled = false;
+                cancelBtn.style.display = "block";
+                indicator.classList.remove('active');
             }
         };
 
@@ -173,7 +261,7 @@
             const x = document.getElementById("toast");
             x.innerText = msg;
             x.className = "show";
-            setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
+            setTimeout(() => { x.className = ""; }, 3000);
         }
 
         window.onload = fetchFiles;

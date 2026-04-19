@@ -96,7 +96,7 @@ async function init() {
 }
 
 // =======================
-// LOAD POSTS (Using Joins)
+// LOAD POSTS (Using Optimized SQL View)
 // =======================
 async function loadPosts() {
     const container = document.getElementById("feedContainer");
@@ -105,16 +105,10 @@ async function loadPosts() {
     const cached = sessionStorage.getItem("cached_feed");
     if (cached) renderPosts(JSON.parse(cached));
 
-    // Fetch posts with profile data via Foreign Key (uid)
+    // Query the VIEW instead of the TABLE to get everything in one request
     const { data: posts, error } = await supa
-        .from("posts")
-        .select(`
-            *,
-            profiles:uid (
-                full_name,
-                avatar_url
-            )
-        `)
+        .from("posts_with_counts")
+        .select("*")
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -123,31 +117,15 @@ async function loadPosts() {
         return;
     }
 
-    // Attach Interaction Counts
-    const finalPosts = await Promise.all(
-        posts.map(async (post) => {
-            const profile = post.profiles;
-            
-            // Logic: Use profile data, fallback to defaults if null
-            const name = profile?.full_name || "Anonymous";
-            const avatar = profile?.avatar_url || DEFAULT_AVATAR;
-
-            const [likes, dislikes, comments] = await Promise.all([
-                supa.from("likes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
-                supa.from("dislikes").select("*", { count: "exact", head: true }).eq("key", post.id).eq("value", true),
-                supa.from("comments").select("*", { count: "exact", head: true }).eq("post_key", post.id)
-            ]);
-
-            return {
-                ...post,
-                name,
-                avatar,
-                lCount: likes.count || 0,
-                dCount: dislikes.count || 0,
-                cCount: comments.count || 0
-            };
-        })
-    );
+    // Map View column names to the variables used in renderPosts
+    const finalPosts = posts.map(post => ({
+        ...post,
+        name: post.full_name || "Anonymous",
+        avatar: post.avatar_url || DEFAULT_AVATAR,
+        lCount: post.like_count || 0,
+        dCount: post.dislike_count || 0,
+        cCount: post.comment_count || 0
+    }));
 
     const freshString = JSON.stringify(finalPosts);
     if (cached !== freshString) {
